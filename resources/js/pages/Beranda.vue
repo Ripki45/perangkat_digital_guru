@@ -21,7 +21,13 @@ import MadrasahBrand from '@/components/app/MadrasahBrand.vue';
 import StatCard from '@/components/app/StatCard.vue';
 import { useInitials } from '@/composables/useInitials';
 import { classLabel, formatDate, greeting, todayLabel } from '@/lib/format';
-import { pancaCinta, quickModules } from '@/lib/modules';
+import {
+    canAccessModule,
+    getQuickModulesForRole,
+    moduleGroups,
+    modules,
+    pancaCinta,
+} from '@/lib/modules';
 import type {
     BerandaStats,
     ClassDistributionItem,
@@ -62,8 +68,8 @@ const dashOffset = computed(
     () => circumference - (completeness.value / 100) * circumference,
 );
 
-const maxClassTotal = computed(
-    () => Math.max(...props.classDistribution.map((item) => item.total), 1),
+const maxClassTotal = computed(() =>
+    Math.max(...props.classDistribution.map((item) => item.total), 1),
 );
 
 const uploadedDocuments = computed(
@@ -73,6 +79,23 @@ const uploadedDocuments = computed(
 const greetingText = computed(() => greeting());
 
 const initials = computed(() => getInitials(teacherName.value));
+
+const userRole = computed(() => user.role ?? null);
+const isSuperadmin = computed(
+    () => !userRole.value || userRole.value === 'superadmin',
+);
+const canManageSiswa = computed(
+    () =>
+        !userRole.value ||
+        userRole.value === 'superadmin' ||
+        userRole.value === 'wali_kelas',
+);
+const visibleQuickModules = computed(() =>
+    getQuickModulesForRole(userRole.value),
+);
+const accessibleModuleCount = computed(
+    () => modules.filter((m) => canAccessModule(m, userRole.value)).length,
+);
 </script>
 
 <template>
@@ -93,7 +116,9 @@ const initials = computed(() => getInitials(teacherName.value));
                 class="paper-grid pointer-events-none absolute inset-0 opacity-[0.07]"
             />
 
-            <div class="relative grid gap-6 lg:grid-cols-[1.6fr_1fr] lg:items-center">
+            <div
+                class="relative grid gap-6 lg:grid-cols-[1.6fr_1fr] lg:items-center"
+            >
                 <div>
                     <div
                         class="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e8c96b]/30 bg-white/8 px-3 py-1 text-[10px] font-semibold tracking-[0.15em] text-[#f0d585] uppercase backdrop-blur"
@@ -105,16 +130,20 @@ const initials = computed(() => getInitials(teacherName.value));
                         {{ todayLabel() }}
                     </p>
                     <h1
-                        class="mt-1 font-serif text-[26px] leading-tight font-bold tracking-tight text-shadow-hero sm:text-3xl"
+                        class="text-shadow-hero mt-1 font-serif text-[26px] leading-tight font-bold tracking-tight sm:text-3xl"
                     >
                         {{ greetingText }},<br class="sm:hidden" />
                         {{ shortName }}
                     </h1>
-                    <p class="mt-2 max-w-xl text-[13px] leading-relaxed text-white/70">
+                    <p
+                        class="mt-2 max-w-xl text-[13px] leading-relaxed text-white/70"
+                    >
                         Selamat datang di ruang kerja digital Anda di
-                        <span class="font-semibold text-[#f0d585]">{{ madrasahName }}</span>.
-                        Kelola perangkat ajar, administrasi, dan asesmen dalam
-                        satu tempat.
+                        <span class="font-semibold text-[#f0d585]">{{
+                            madrasahName
+                        }}</span
+                        >. Kelola perangkat ajar, administrasi, dan asesmen
+                        dalam satu tempat.
                     </p>
 
                     <div class="mt-4 flex flex-wrap items-center gap-2">
@@ -140,12 +169,42 @@ const initials = computed(() => getInitials(teacherName.value));
 
                     <div class="mt-5 flex flex-wrap gap-2">
                         <Link
+                            v-if="canManageSiswa"
                             href="/siswa"
                             class="inline-flex h-9 items-center gap-2 rounded-lg bg-[#c99700] px-4 text-[12.5px] font-semibold text-[#1b1403] shadow-[0_10px_24px_-12px_rgba(201,151,0,0.9)] transition hover:bg-[#dcae35]"
                         >
                             <Users class="size-4" />
                             Kelola Data Siswa
                             <ArrowRight class="size-3.5" />
+                        </Link>
+                        <Link
+                            v-else
+                            href="/rdm"
+                            class="inline-flex h-9 items-center gap-2 rounded-lg bg-[#c99700] px-4 text-[12.5px] font-semibold text-[#1b1403] shadow-[0_10px_24px_-12px_rgba(201,151,0,0.9)] transition hover:bg-[#dcae35]"
+                        >
+                            <BookOpen class="size-4" />
+                            Nilai RDM MI (13 Mapel)
+                            <ArrowRight class="size-3.5" />
+                        </Link>
+                        <Link
+                            v-if="canManageSiswa"
+                            href="/rekap-emis"
+                            class="inline-flex h-9 items-center gap-2 rounded-lg border border-white/20 bg-white/8 px-4 text-[12.5px] font-medium text-white/90 backdrop-blur transition hover:bg-white/15"
+                        >
+                            Rekap & Cetak Massal
+                        </Link>
+                        <Link
+                            v-if="isSuperadmin"
+                            href="/gtk"
+                            class="inline-flex h-9 items-center gap-2 rounded-lg border border-white/20 bg-white/8 px-4 text-[12.5px] font-medium text-white/90 backdrop-blur transition hover:bg-white/15"
+                        >
+                            Data GTK ({{ stats.gurus ?? 0 }})
+                        </Link>
+                        <Link
+                            href="/cek-nisn"
+                            class="inline-flex h-9 items-center gap-2 rounded-lg border border-white/20 bg-white/8 px-4 text-[12.5px] font-medium text-white/90 backdrop-blur transition hover:bg-white/15"
+                        >
+                            Cek NISN
                         </Link>
                         <Link
                             href="/identitas"
@@ -204,21 +263,29 @@ const initials = computed(() => getInitials(teacherName.value));
                                 </div>
                             </div>
                             <div class="min-w-0">
-                                <p class="text-[10px] text-white/50 uppercase tracking-[0.16em]">
+                                <p
+                                    class="text-[10px] tracking-[0.16em] text-white/50 uppercase"
+                                >
                                     Kartu Identitas
                                 </p>
-                                <p class="mt-1 truncate text-sm font-semibold text-white">
+                                <p
+                                    class="mt-1 truncate text-sm font-semibold text-white"
+                                >
                                     {{ teacherName }}
                                 </p>
                                 <p class="truncate text-[11px] text-[#e8c96b]">
                                     NIP {{ profile?.nip || 'belum diisi' }}
                                 </p>
-                                <p class="mt-0.5 truncate text-[10.5px] text-white/55">
+                                <p
+                                    class="mt-0.5 truncate text-[10.5px] text-white/55"
+                                >
                                     {{ profile?.jabatan || 'Guru Madrasah' }}
                                 </p>
                             </div>
                         </div>
-                        <div class="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-3">
+                        <div
+                            class="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-3"
+                        >
                             <div class="flex items-center gap-2">
                                 <div
                                     class="grid size-7 place-items-center rounded-full bg-[#c99700]/20 text-[10px] font-bold text-[#f0d585]"
@@ -286,21 +353,28 @@ const initials = computed(() => getInitials(teacherName.value));
                 >
                     <div class="mb-4 flex items-end justify-between gap-3">
                         <div>
-                            <p class="text-[10px] font-semibold tracking-[0.18em] text-[#a87c00] uppercase">
+                            <p
+                                class="text-[10px] font-semibold tracking-[0.18em] text-[#a87c00] uppercase"
+                            >
                                 Akses Cepat
                             </p>
-                            <h2 class="mt-1 font-serif text-lg font-bold text-foreground">
+                            <h2
+                                class="mt-1 font-serif text-lg font-bold text-foreground"
+                            >
                                 Pintasan Modul
                             </h2>
                         </div>
-                        <span class="hidden text-[11px] text-muted-foreground sm:block">
-                            21 modul dalam 5 kategori
+                        <span
+                            class="hidden text-[11px] text-muted-foreground sm:block"
+                        >
+                            {{ accessibleModuleCount }} modul dalam
+                            {{ moduleGroups.length }} kategori
                         </span>
                     </div>
 
                     <div class="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                         <Link
-                            v-for="module in quickModules"
+                            v-for="module in visibleQuickModules"
                             :key="module.slug"
                             :href="module.href"
                             class="group flex items-start gap-3 rounded-xl border border-border/70 bg-background/40 p-3 transition hover:border-[#107c41]/30 hover:bg-[#107c41]/[0.035]"
@@ -312,7 +386,9 @@ const initials = computed(() => getInitials(teacherName.value));
                             </div>
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center gap-1.5">
-                                    <p class="truncate text-[12.5px] font-semibold text-foreground">
+                                    <p
+                                        class="truncate text-[12.5px] font-semibold text-foreground"
+                                    >
                                         {{ module.title }}
                                     </p>
                                     <span
@@ -322,12 +398,14 @@ const initials = computed(() => getInitials(teacherName.value));
                                         Segera
                                     </span>
                                 </div>
-                                <p class="mt-0.5 line-clamp-1 text-[10.5px] text-muted-foreground">
+                                <p
+                                    class="mt-0.5 line-clamp-1 text-[10.5px] text-muted-foreground"
+                                >
                                     {{ module.description }}
                                 </p>
                             </div>
                             <ArrowUpRight
-                                class="mt-1 size-3.5 shrink-0 text-muted-foreground/50 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#107c41]"
+                                class="mt-1 size-3.5 shrink-0 text-muted-foreground/50 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[#107c41]"
                             />
                         </Link>
                     </div>
@@ -339,14 +417,19 @@ const initials = computed(() => getInitials(teacherName.value));
                 >
                     <div class="mb-4 flex items-end justify-between gap-3">
                         <div>
-                            <p class="text-[10px] font-semibold tracking-[0.18em] text-[#a87c00] uppercase">
+                            <p
+                                class="text-[10px] font-semibold tracking-[0.18em] text-[#a87c00] uppercase"
+                            >
                                 Sebaran
                             </p>
-                            <h2 class="mt-1 font-serif text-lg font-bold text-foreground">
+                            <h2
+                                class="mt-1 font-serif text-lg font-bold text-foreground"
+                            >
                                 Siswa per Kelas
                             </h2>
                         </div>
                         <Link
+                            v-if="canManageSiswa"
                             href="/siswa"
                             class="inline-flex items-center gap-1 text-[11px] font-semibold text-[#107c41] hover:underline"
                         >
@@ -364,15 +447,23 @@ const initials = computed(() => getInitials(teacherName.value));
                             :key="item.kelas"
                             class="min-w-0"
                         >
-                            <div class="mb-1 flex items-center justify-between gap-2">
-                                <span class="truncate text-[11.5px] font-medium text-foreground/80">
+                            <div
+                                class="mb-1 flex items-center justify-between gap-2"
+                            >
+                                <span
+                                    class="truncate text-[11.5px] font-medium text-foreground/80"
+                                >
                                     {{ classLabel(item.kelas) }}
                                 </span>
-                                <span class="text-[10.5px] font-semibold text-muted-foreground">
+                                <span
+                                    class="text-[10.5px] font-semibold text-muted-foreground"
+                                >
                                     {{ item.total }}
                                 </span>
                             </div>
-                            <div class="h-2 overflow-hidden rounded-full bg-[#107c41]/8">
+                            <div
+                                class="h-2 overflow-hidden rounded-full bg-[#107c41]/8"
+                            >
                                 <div
                                     class="h-full rounded-full bg-gradient-to-r from-[#107c41] to-[#3dbb7a]"
                                     :style="{
@@ -398,24 +489,34 @@ const initials = computed(() => getInitials(teacherName.value));
                 >
                     <div class="mb-3 flex items-center justify-between">
                         <div>
-                            <p class="text-[10px] font-semibold tracking-[0.18em] text-[#a87c00] uppercase">
+                            <p
+                                class="text-[10px] font-semibold tracking-[0.18em] text-[#a87c00] uppercase"
+                            >
                                 Berkas Resmi
                             </p>
-                            <h2 class="mt-1 font-serif text-lg font-bold text-foreground">
+                            <h2
+                                class="mt-1 font-serif text-lg font-bold text-foreground"
+                            >
                                 Legalitas
                             </h2>
                         </div>
-                        <div class="rounded-full bg-[#107c41]/8 px-2.5 py-1 text-[10.5px] font-semibold text-[#107c41]">
+                        <div
+                            class="rounded-full bg-[#107c41]/8 px-2.5 py-1 text-[10.5px] font-semibold text-[#107c41]"
+                        >
                             {{ uploadedDocuments }}/{{ documentTypes.length }}
                         </div>
                     </div>
 
                     <div class="space-y-1.5">
-                        <Link
+                        <component
+                            :is="isSuperadmin ? Link : 'div'"
                             v-for="document in documentTypes"
                             :key="document.type"
-                            href="/legalitas"
-                            class="flex items-center gap-2.5 rounded-lg px-2 py-2 transition hover:bg-[#107c41]/[0.04]"
+                            v-bind="isSuperadmin ? { href: '/legalitas' } : {}"
+                            class="flex items-center gap-2.5 rounded-lg px-2 py-2 transition"
+                            :class="
+                                isSuperadmin ? 'hover:bg-[#107c41]/[0.04]' : ''
+                            "
                         >
                             <span
                                 class="grid size-7 shrink-0 place-items-center rounded-full"
@@ -425,10 +526,15 @@ const initials = computed(() => getInitials(teacherName.value));
                                         : 'bg-[#c99700]/10 text-[#a87c00]'
                                 "
                             >
-                                <Check v-if="document.uploaded" class="size-3.5" />
+                                <Check
+                                    v-if="document.uploaded"
+                                    class="size-3.5"
+                                />
                                 <Upload v-else class="size-3.5" />
                             </span>
-                            <span class="min-w-0 flex-1 truncate text-[11.5px] text-foreground/80">
+                            <span
+                                class="min-w-0 flex-1 truncate text-[11.5px] text-foreground/80"
+                            >
                                 {{ document.label }}
                             </span>
                             <span
@@ -439,9 +545,15 @@ const initials = computed(() => getInitials(teacherName.value));
                                         : 'text-[#a87c00]'
                                 "
                             >
-                                {{ document.uploaded ? 'Ada' : 'Unggah' }}
+                                {{
+                                    document.uploaded
+                                        ? 'Ada'
+                                        : isSuperadmin
+                                          ? 'Unggah'
+                                          : 'Belum'
+                                }}
                             </span>
-                        </Link>
+                        </component>
                     </div>
                 </section>
 
@@ -451,10 +563,14 @@ const initials = computed(() => getInitials(teacherName.value));
                 >
                     <div class="mb-3 flex items-center justify-between">
                         <div>
-                            <p class="text-[10px] font-semibold tracking-[0.18em] text-[#a87c00] uppercase">
+                            <p
+                                class="text-[10px] font-semibold tracking-[0.18em] text-[#a87c00] uppercase"
+                            >
                                 Terbaru
                             </p>
-                            <h2 class="mt-1 font-serif text-lg font-bold text-foreground">
+                            <h2
+                                class="mt-1 font-serif text-lg font-bold text-foreground"
+                            >
                                 Siswa Baru
                             </h2>
                         </div>
@@ -478,27 +594,38 @@ const initials = computed(() => getInitials(teacherName.value));
                                 {{ getInitials(student.nama) }}
                             </div>
                             <div class="min-w-0 flex-1">
-                                <p class="truncate text-[11.5px] font-medium text-foreground/85">
+                                <p
+                                    class="truncate text-[11.5px] font-medium text-foreground/85"
+                                >
                                     {{ student.nama }}
                                 </p>
                                 <p class="text-[10px] text-muted-foreground">
                                     NISN {{ student.nisn || '—' }}
                                 </p>
                             </div>
-                            <span class="rounded-md bg-muted px-1.5 py-0.5 text-[9.5px] font-medium text-muted-foreground">
+                            <span
+                                class="rounded-md bg-muted px-1.5 py-0.5 text-[9.5px] font-medium text-muted-foreground"
+                            >
                                 {{ student.kelas }}
                             </span>
                         </div>
                     </div>
-                    <div v-else class="py-5 text-center text-[11.5px] text-muted-foreground">
+                    <div
+                        v-else
+                        class="py-5 text-center text-[11.5px] text-muted-foreground"
+                    >
                         Belum ada data siswa.
                     </div>
 
                     <Link
-                        href="/siswa"
+                        :href="canManageSiswa ? '/siswa' : '/cek-nisn'"
                         class="mt-2 flex items-center justify-center gap-1 rounded-lg border border-[#107c41]/15 py-2 text-[11px] font-semibold text-[#107c41] transition hover:bg-[#107c41]/5"
                     >
-                        Buka Master Data Siswa
+                        {{
+                            canManageSiswa
+                                ? 'Buka Master Data Siswa'
+                                : 'Cek Data Siswa (NISN)'
+                        }}
                         <ArrowRight class="size-3" />
                     </Link>
                 </section>
@@ -507,14 +634,18 @@ const initials = computed(() => getInitials(teacherName.value));
 
         <!-- Panca Cinta -->
         <section
-            class="relative overflow-hidden rounded-2xl border border-[#c99700]/20 bg-[linear-gradient(100deg,#fbf5e2,#fffdf6_55%,#f6efe0)] p-4 dark:border-[#c99700]/15 dark:bg-[linear-gradient(100deg,#171304,#0f1d13)] md:p-5"
+            class="relative overflow-hidden rounded-2xl border border-[#c99700]/20 bg-[linear-gradient(100deg,#fbf5e2,#fffdf6_55%,#f6efe0)] p-4 md:p-5 dark:border-[#c99700]/15 dark:bg-[linear-gradient(100deg,#171304,#0f1d13)]"
         >
             <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
                 <div>
-                    <p class="text-[10px] font-semibold tracking-[0.18em] text-[#a87c00] uppercase">
+                    <p
+                        class="text-[10px] font-semibold tracking-[0.18em] text-[#a87c00] uppercase"
+                    >
                         Fondasi Karakter
                     </p>
-                    <h2 class="mt-1 font-serif text-lg font-bold text-[#073f24] dark:text-[#f3d583]">
+                    <h2
+                        class="mt-1 font-serif text-lg font-bold text-[#073f24] dark:text-[#f3d583]"
+                    >
                         Lima Nilai Panca Cinta
                     </h2>
                 </div>
@@ -532,11 +663,15 @@ const initials = computed(() => getInitials(teacherName.value));
                         >
                             {{ index + 1 }}
                         </span>
-                        <p class="text-[11px] font-bold text-[#073f24] dark:text-[#f3d583]">
+                        <p
+                            class="text-[11px] font-bold text-[#073f24] dark:text-[#f3d583]"
+                        >
                             {{ value.title }}
                         </p>
                     </div>
-                    <p class="mt-1.5 text-[10px] leading-relaxed text-[#5c6d61] dark:text-muted-foreground">
+                    <p
+                        class="mt-1.5 text-[10px] leading-relaxed text-[#5c6d61] dark:text-muted-foreground"
+                    >
                         {{ value.description }}
                     </p>
                 </div>

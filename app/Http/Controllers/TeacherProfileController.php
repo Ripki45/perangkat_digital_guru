@@ -39,6 +39,9 @@ class TeacherProfileController extends Controller
             'motto' => ['nullable', 'string', 'max:255'],
             'nama_madrasah' => ['required', 'string', 'max:200'],
             'npsn' => ['nullable', 'string', 'max:20'],
+            'nsm' => ['nullable', 'string', 'max:30'],
+            'kemenag_kab' => ['nullable', 'string', 'max:200'],
+            'tempat_surat' => ['nullable', 'string', 'max:100'],
             'alamat' => ['nullable', 'string', 'max:500'],
             'desa' => ['nullable', 'string', 'max:100'],
             'kecamatan' => ['nullable', 'string', 'max:100'],
@@ -50,6 +53,10 @@ class TeacherProfileController extends Controller
             'website' => ['nullable', 'string', 'max:150'],
             'nama_kepala_madrasah' => ['nullable', 'string', 'max:150'],
             'nip_kepala_madrasah' => ['nullable', 'string', 'max:30'],
+            'operator_nama' => ['nullable', 'string', 'max:150'],
+            'operator_hp' => ['nullable', 'string', 'max:30'],
+            'logo_kiri' => ['nullable', 'string'],
+            'logo_kanan' => ['nullable', 'string'],
         ]);
 
         $request->user()->teacherProfile()->updateOrCreate([], $data);

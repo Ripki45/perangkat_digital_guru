@@ -2,39 +2,45 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+#[Table('teacher_profiles')]
+#[Fillable([
+    'nama_guru',
+    'nip',
+    'nuptk',
+    'jabatan',
+    'mata_pelajaran',
+    'kelas_wali',
+    'tahun_ajaran',
+    'semester',
+    'motto',
+    'nama_madrasah',
+    'npsn',
+    'nsm',
+    'kemenag_kab',
+    'tempat_surat',
+    'alamat',
+    'desa',
+    'kecamatan',
+    'kabupaten',
+    'provinsi',
+    'kode_pos',
+    'telepon',
+    'email_madrasah',
+    'website',
+    'nama_kepala_madrasah',
+    'nip_kepala_madrasah',
+    'operator_nama',
+    'operator_hp',
+    'logo_kiri',
+    'logo_kanan',
+])]
 class TeacherProfile extends Model
 {
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'nama_guru',
-        'nip',
-        'nuptk',
-        'jabatan',
-        'mata_pelajaran',
-        'kelas_wali',
-        'tahun_ajaran',
-        'semester',
-        'motto',
-        'nama_madrasah',
-        'npsn',
-        'alamat',
-        'desa',
-        'kecamatan',
-        'kabupaten',
-        'provinsi',
-        'kode_pos',
-        'telepon',
-        'email_madrasah',
-        'website',
-        'nama_kepala_madrasah',
-        'nip_kepala_madrasah',
-    ];
-
     /**
      * @return BelongsTo<User, $this>
      */

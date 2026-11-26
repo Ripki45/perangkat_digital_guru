@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Rombel;
 use App\Models\Student;
+use App\Models\User;
+use App\Services\EmisPayloadMapper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -16,35 +19,65 @@ class StudentController extends Controller
 {
     public function index(Request $request): Response
     {
-        $students = $request->user()->students()
+        /** @var User $user */
+        $user = $request->user();
+
+        EmisPayloadMapper::ensureDefaultRombels($user);
+
+        $students = $user->students()
             ->orderBy('kelas')
             ->orderBy('nama')
             ->get();
 
+        $rombels = $user->rombels()->orderBy('tingkat')->orderBy('kode')->get();
+
         $classes = $students
             ->pluck('kelas')
+            ->merge($rombels->pluck('kode'))
             ->filter()
             ->unique()
-            ->sort(fn (string $a, string $b) => strnatcasecmp($a, $b))
+            ->sort(fn (string $a, string $b): int => strnatcasecmp($a, $b))
             ->values();
 
         return Inertia::render('Siswa/Index', [
-            'students' => $students->map(fn (Student $student) => $this->toPayload($student))->values(),
+            'students' => $students->map(fn (Student $student): array => $this->toPayload($student))->values(),
             'classes' => $classes,
+            'rombels' => $rombels->map(fn (Rombel $rombel): array => [
+                'id' => $rombel->id,
+                'tingkat' => $rombel->tingkat,
+                'kode' => $rombel->kode,
+                'wali' => $rombel->wali ?? '',
+            ])->values(),
             'stats' => [
                 'total' => $students->count(),
                 'male' => $students->where('jenis_kelamin', 'L')->count(),
                 'female' => $students->where('jenis_kelamin', 'P')->count(),
                 'classes' => $classes->count(),
             ],
+            'madrasahProfile' => EmisPayloadMapper::madrasahProfilePayload($user),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $this->validateStudent($request);
+        /** @var User $user */
+        $user = $request->user();
 
-        $request->user()->students()->create($data);
+        if ($this->isEmisFormPayload($request)) {
+            $data = $this->validateEmisStudent($request);
+            $attributes = EmisPayloadMapper::studentAttributesFromEmis($data);
+            $user->students()->create($attributes);
+
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => "Data siswa {$attributes['nama']} berhasil ditambahkan.",
+            ]);
+
+            return back();
+        }
+
+        $data = $this->validateStudent($request);
+        $user->students()->create($data);
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -58,8 +91,20 @@ class StudentController extends Controller
     {
         $this->ensureOwner($request, $student);
 
-        $data = $this->validateStudent($request);
+        if ($this->isEmisFormPayload($request)) {
+            $data = $this->validateEmisStudent($request);
+            $attributes = EmisPayloadMapper::studentAttributesFromEmis($data);
+            $student->update($attributes);
 
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => "Data siswa {$student->nama} berhasil diperbarui.",
+            ]);
+
+            return back();
+        }
+
+        $data = $this->validateStudent($request);
         $student->update($data);
 
         Inertia::flash('toast', [
@@ -112,7 +157,7 @@ class StudentController extends Controller
                     continue;
                 }
 
-                $nama = Str::limit($columns[0] ?? '', 150, '');
+                $nama = Str::limit($columns[0], 150, '');
 
                 if ($nama === '') {
                     $skipped++;
@@ -166,6 +211,94 @@ class StudentController extends Controller
         return back();
     }
 
+    public function importEmis(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'students' => ['required', 'array', 'min:1', 'max:1000'],
+            'students.*.nama' => ['required', 'string', 'max:150'],
+        ]);
+
+        $rows = $request->input('students', []);
+        if (! is_array($rows)) {
+            $rows = [];
+        }
+
+        /** @var User $user */
+        $user = $request->user();
+        $imported = 0;
+
+        DB::transaction(function () use ($user, $rows, &$imported): void {
+            foreach ($rows as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+
+                $attrs = EmisPayloadMapper::studentAttributesFromEmis($row);
+                if ($attrs['nama'] === '') {
+                    continue;
+                }
+
+                $nisn = $attrs['nisn'];
+                $existing = $nisn ? $user->students()->where('nisn', $nisn)->first() : null;
+
+                if ($existing) {
+                    if (empty($attrs['foto']) && $existing->foto) {
+                        $attrs['foto'] = $existing->foto;
+                    }
+                    $existing->update($attrs);
+                } else {
+                    $user->students()->create($attrs);
+                }
+
+                $imported++;
+            }
+        });
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => "Berhasil mengimpor {$imported} data siswa EMIS 4.0 dari Excel.",
+        ]);
+
+        return back();
+    }
+
+    public function loadSample(Request $request): RedirectResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        DB::transaction(function () use ($user): void {
+            foreach (EmisPayloadMapper::defaultRombels() as $rombel) {
+                $user->rombels()->firstOrCreate(
+                    ['kode' => $rombel['kode']],
+                    ['tingkat' => $rombel['tingkat'], 'wali' => $rombel['wali'] ?: null],
+                );
+            }
+
+            foreach (EmisPayloadMapper::sampleStudents() as $row) {
+                $existing = $user->students()->where('nisn', $row['nisn'])->first();
+                $attrs = EmisPayloadMapper::studentAttributesFromEmis($row);
+                if ($existing) {
+                    $existing->update($attrs);
+                } else {
+                    $user->students()->create($attrs);
+                }
+            }
+        });
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Data sampel siswa EMIS 4.0 MIN 1 Ciamis berhasil dimuat.',
+        ]);
+
+        return back();
+    }
+
+    private function isEmisFormPayload(Request $request): bool
+    {
+        return $request->hasAny(['rombel', 'jk', 'nik', 'nisLokal', 'tingkat', 'statusSiswa']);
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -182,9 +315,26 @@ class StudentController extends Controller
             'nama_wali' => ['nullable', 'string', 'max:150'],
             'no_hp' => ['nullable', 'string', 'max:30'],
             'alamat' => ['nullable', 'string', 'max:500'],
-            'status' => ['required', 'in:Aktif,Lulus,Pindah,Keluar'],
+            'status' => ['required', 'in:Aktif,Lulus,Pindah,Keluar,Mutasi Keluar,Putus Sekolah'],
             'catatan' => ['nullable', 'string', 'max:500'],
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validateEmisStudent(Request $request): array
+    {
+        return $request->validate([
+            'nama' => ['required', 'string', 'max:150'],
+            'nisn' => ['required', 'regex:/^\d{10}$/'],
+            'nik' => ['required', 'regex:/^\d{16}$/'],
+            'jk' => ['required', 'in:L,P'],
+            'rombel' => ['required', 'string', 'max:30'],
+            'tingkat' => ['nullable', 'in:1,2,3,4,5,6'],
+            'statusSiswa' => ['required', 'in:Aktif,Lulus,Pindah,Keluar,Mutasi Keluar,Putus Sekolah'],
+            'tglLahir' => ['nullable', 'date'],
+        ]) + $request->all();
     }
 
     /**
@@ -193,6 +343,7 @@ class StudentController extends Controller
     private function toPayload(Student $student): array
     {
         return [
+            ...$student->toEmisPayload(),
             'id' => $student->id,
             'nama' => $student->nama,
             'nisn' => $student->nisn,
@@ -215,6 +366,9 @@ class StudentController extends Controller
         abort_unless($student->user_id === $request->user()->id, 403);
     }
 
+    /**
+     * @return non-empty-string
+     */
     private function detectDelimiter(string $line): string
     {
         return match (true) {
@@ -250,12 +404,18 @@ class StudentController extends Controller
             return null;
         }
 
-        foreach (['d/m/Y', 'd-m-Y', 'Y-m-d', 'd.m.Y'] as $format) {
-            if (Carbon::hasFormat($value, $format)) {
+        foreach (['Y-m-d', 'd/m/Y', 'd-m-Y', 'm/d/Y'] as $format) {
+            try {
                 return Carbon::createFromFormat($format, $value)->format('Y-m-d');
+            } catch (\Throwable) {
+                continue;
             }
         }
 
-        return null;
+        try {
+            return Carbon::parse($value)->format('Y-m-d');
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

@@ -26,6 +26,18 @@ const { getInitials } = useInitials();
 const user = page.props.auth.user;
 const profile = computed(() => page.props.teacherProfile);
 
+const visibleGroups = computed(() => {
+    const role = user?.role ?? null;
+    return moduleGroups
+        .map((group) => ({
+            ...group,
+            items: group.items.filter(
+                (item) => !item.roles || (role && item.roles.includes(role)),
+            ),
+        }))
+        .filter((group) => group.items.length > 0);
+});
+
 const teacherName = computed(() => profile.value?.nama_guru || user.name);
 const madrasahName = computed(
     () => profile.value?.nama_madrasah || 'Madrasah Ibtidaiyah',
@@ -45,9 +57,7 @@ const semester = computed(() => profile.value?.semester || 'Ganjil');
         variant="inset"
         class="[&_[data-sidebar=sidebar]]:bg-[linear-gradient(180deg,#073f24_0%,#062f1c_100%)]"
     >
-        <SidebarHeader
-            class="gap-3 border-b border-white/10 px-3 pt-4 pb-3"
-        >
+        <SidebarHeader class="gap-3 border-b border-white/10 px-3 pt-4 pb-3">
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton
@@ -67,7 +77,7 @@ const semester = computed(() => profile.value?.semester || 'Ganjil');
 
             <Link
                 href="/identitas"
-                class="group/profile flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.055] p-2.5 transition-colors hover:border-[#c99700]/35 hover:bg-white/[0.09] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:border-transparent group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0"
+                class="group/profile flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.055] p-2.5 transition-colors group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:border-transparent group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 hover:border-[#c99700]/35 hover:bg-white/[0.09]"
                 title="Buka identitas guru"
             >
                 <Avatar
@@ -99,12 +109,10 @@ const semester = computed(() => profile.value?.semester || 'Ganjil');
         </SidebarHeader>
 
         <SidebarContent>
-            <SidebarNav :groups="moduleGroups" />
+            <SidebarNav :groups="visibleGroups" />
         </SidebarContent>
 
-        <SidebarFooter
-            class="gap-2 border-t border-white/10 px-3 pt-3 pb-2"
-        >
+        <SidebarFooter class="gap-2 border-t border-white/10 px-3 pt-3 pb-2">
             <div
                 class="rounded-xl border border-[#c99700]/25 bg-gradient-to-br from-[#c99700]/15 to-transparent p-3 group-data-[collapsible=icon]:hidden"
             >

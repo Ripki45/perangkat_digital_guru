@@ -1,4 +1,5 @@
 import {
+    ArrowRightLeft,
     BookOpenCheck,
     BookOpenText,
     CalendarCheck,
@@ -11,13 +12,18 @@ import {
     Database,
     FileSearch,
     FileSpreadsheet,
+    GraduationCap,
     House,
     IdCard,
+    Layers,
     LibraryBig,
     ListChecks,
     NotebookPen,
     Presentation,
+    Printer,
+    ScanSearch,
     ScrollText,
+    Sparkles,
     SquareCheckBig,
     Stamp,
     Target,
@@ -34,6 +40,7 @@ export type ModuleItem = {
     description: string;
     features: string[];
     ready: boolean;
+    roles?: string[];
 };
 
 export type ModuleGroup = {
@@ -84,6 +91,28 @@ export const moduleGroups: ModuleGroup[] = [
                 icon: Stamp,
                 description:
                     'Pusat berkas legalitas: logo madrasah, tanda tangan guru, tanda tangan kepala madrasah, dan stempel resmi.',
+                features: [],
+                ready: true,
+                roles: ['superadmin'],
+            },
+            {
+                slug: 'gtk',
+                title: 'Data Guru & GTK EMIS',
+                href: '/gtk',
+                icon: GraduationCap,
+                description:
+                    'Kelola data Pendidik dan Tenaga Kependidikan berstandar EMIS 4.0: NPK, NUPTK, Sertifikasi, JTM, dan rekap kepegawaian.',
+                features: [],
+                ready: true,
+                roles: ['superadmin'],
+            },
+            {
+                slug: 'asisten-ai',
+                title: 'Asisten AI & Vektor',
+                href: '/asisten-ai',
+                icon: Sparkles,
+                description:
+                    'Asisten Laravel AI SDK, pencarian semantik vektor siswa & GTK, sinkronisasi antrean Queue::route, serta API JSON:API v1.1.',
                 features: [],
                 ready: true,
             },
@@ -268,9 +297,53 @@ export const moduleGroups: ModuleGroup[] = [
                 href: '/siswa',
                 icon: Users,
                 description:
-                    'Kelola data seluruh peserta didik: tambah satuan, edit, hapus, dan impor massal dari salinan Excel.',
+                    'Kelola data induk peserta didik berstandar EMIS 4.0: form 6 langkah, pas foto 3x4, cetak Buku Induk, KTS, dan impor massal.',
                 features: [],
                 ready: true,
+                roles: ['superadmin', 'wali_kelas'],
+            },
+            {
+                slug: 'rombel',
+                title: 'Rombel & Kenaikan Kelas',
+                href: '/rombel',
+                icon: Layers,
+                description:
+                    'Kelola rombongan belajar Kelas 1–6 MI, wali kelas, pindah rombel massal, dan proses kelulusan kelas 6.',
+                features: [],
+                ready: true,
+                roles: ['superadmin', 'wali_kelas'],
+            },
+            {
+                slug: 'mutasi',
+                title: 'Mutasi & Surat Pindah',
+                href: '/mutasi',
+                icon: ArrowRightLeft,
+                description:
+                    'Pencatatan siswa mutasi masuk/keluar, alumni lulus, ekspor XLSX, dan cetak Surat Keterangan Pindah Madrasah.',
+                features: [],
+                ready: true,
+                roles: ['superadmin', 'wali_kelas'],
+            },
+            {
+                slug: 'cek-nisn',
+                title: 'Cek Data Siswa (NISN)',
+                href: '/cek-nisn',
+                icon: ScanSearch,
+                description:
+                    'Pencarian biodata EMIS 4.0, rombel, bantuan sosial, dan rekap nilai RDM menggunakan 10 digit NISN.',
+                features: [],
+                ready: true,
+            },
+            {
+                slug: 'rekap-emis',
+                title: 'Rekap & Cetak Massal',
+                href: '/rekap-emis',
+                icon: Printer,
+                description:
+                    'Statistik grafik rombel & usia MI, validasi EMIS, cetak massal KTS/Buku Induk/Nominatif/Transkrip, dan backup JSON.',
+                features: [],
+                ready: true,
+                roles: ['superadmin', 'wali_kelas'],
             },
             {
                 slug: 'daftar-hadir',
@@ -316,17 +389,18 @@ export const moduleGroups: ModuleGroup[] = [
             },
             {
                 slug: 'nilai-analisis',
-                title: 'Nilai & Analisis Hasil',
-                href: placeholder('nilai-analisis'),
+                title: 'Nilai RDM & Analisis Hasil',
+                href: '/rdm',
                 icon: ChartColumn,
                 description:
-                    'Pengolahan nilai, analisis butir soal, dan laporan hasil belajar peserta didik.',
+                    'Pengolahan nilai Rapor Digital Madrasah (RDM) 13 Mapel + IPAS × 12 Semester, impor leger Excel, dan cetak transkrip resmi.',
                 features: [
-                    'Input nilai formatif dan sumatif',
-                    'Analisis ketuntasan belajar',
-                    'Cetak leger dan rapor',
+                    'Input & edit nilai 13 mapel MI per semester (S1-S12)',
+                    'Impor & ekspor leger Excel berstandar RDM',
+                    'Cetak transkrip nilai satuan maupun massal',
                 ],
-                ready: false,
+                ready: true,
+                roles: ['superadmin', 'wali_kelas', 'guru_mapel'],
             },
         ],
     },
@@ -376,22 +450,48 @@ export const modules: ModuleInfo[] = moduleGroups.flatMap((group) =>
     })),
 );
 
-export const moduleMap = new Map(modules.map((module) => [module.slug, module]));
+export const moduleMap = new Map(
+    modules.map((module) => [module.slug, module]),
+);
 
 export function findModule(slug: string): ModuleInfo | undefined {
     return moduleMap.get(slug);
 }
 
-export const quickModules: ModuleInfo[] = [
+export function canAccessModule(
+    module: Pick<ModuleItem, 'roles'>,
+    role?: string | null,
+): boolean {
+    if (!module.roles || module.roles.length === 0) {
+        return true;
+    }
+    if (!role) {
+        return true;
+    }
+    return module.roles.includes(role);
+}
+
+const quickSlugs = [
+    'siswa',
+    'rombel',
+    'mutasi',
+    'nilai-analisis',
+    'rekap-emis',
+    'cek-nisn',
+    'gtk',
     'identitas',
     'legalitas',
-    'siswa',
-    'modul-ajar',
-    'bank-soal',
-    'e-book',
-]
+];
+
+export const quickModules: ModuleInfo[] = quickSlugs
     .map((slug) => moduleMap.get(slug))
     .filter((module): module is ModuleInfo => Boolean(module));
+
+export function getQuickModulesForRole(role?: string | null): ModuleInfo[] {
+    return quickModules
+        .filter((module) => canAccessModule(module, role))
+        .slice(0, 6);
+}
 
 export const pancaCinta = [
     {

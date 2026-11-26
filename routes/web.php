@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\AiAssistantController;
+use App\Http\Controllers\Api\V1\EmisJsonApiController;
 use App\Http\Controllers\BerandaController;
+use App\Http\Controllers\CekNisnController;
 use App\Http\Controllers\DemoLoginController;
 use App\Http\Controllers\LegalDocumentController;
 use App\Http\Controllers\ModulePlaceholderController;
-use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherProfileController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use Illuminate\Support\Facades\Route;
@@ -28,22 +30,30 @@ Route::middleware(['auth'])->group(function () {
         ->where('current_team', '[A-Za-z0-9-]+')
         ->name('team.dashboard');
 
-    // Identitas guru & madrasah
+    // Identitas guru masing-masing
     Route::get('identitas', [TeacherProfileController::class, 'edit'])->name('identitas.edit');
     Route::put('identitas', [TeacherProfileController::class, 'update'])->name('identitas.update');
 
-    // Legalitas: logo, tanda tangan & stempel
-    Route::get('legalitas', [LegalDocumentController::class, 'index'])->name('legalitas.index');
-    Route::post('legalitas', [LegalDocumentController::class, 'store'])->name('legalitas.store');
+    // Preview aset legalitas agar bisa tampil di dokumen cetak semua guru
     Route::get('legalitas/{legalDocument}/preview', [LegalDocumentController::class, 'preview'])->name('legalitas.preview');
-    Route::delete('legalitas/{legalDocument}', [LegalDocumentController::class, 'destroy'])->name('legalitas.destroy');
 
-    // Master data siswa
-    Route::get('siswa', [StudentController::class, 'index'])->name('siswa.index');
-    Route::post('siswa', [StudentController::class, 'store'])->name('siswa.store');
-    Route::post('siswa/impor-massal', [StudentController::class, 'bulkStore'])->name('siswa.bulk');
-    Route::put('siswa/{student}', [StudentController::class, 'update'])->name('siswa.update');
-    Route::delete('siswa/{student}', [StudentController::class, 'destroy'])->name('siswa.destroy');
+    // Portal Cek Data Siswa via NISN (khusus setelah login)
+    Route::get('cek-nisn', [CekNisnController::class, 'index'])->name('cek-nisn.index');
+    Route::get('cek-nisn/cari', [CekNisnController::class, 'lookup'])->name('cek-nisn.lookup');
+
+    // Asisten AI SDK & Pencarian Semantik Vektor EMIS 4.0
+    Route::get('asisten-ai', [AiAssistantController::class, 'index'])->name('asisten-ai.index');
+    Route::post('asisten-ai/tanya', [AiAssistantController::class, 'ask'])->name('asisten-ai.ask');
+    Route::get('asisten-ai/pencarian', [AiAssistantController::class, 'semanticSearch'])->name('asisten-ai.search');
+    Route::post('asisten-ai/sinkron', [AiAssistantController::class, 'syncVectors'])->name('asisten-ai.sync');
+
+    // Endpoint JSON:API v1.1 Resmi (application/vnd.api+json)
+    Route::prefix('api/v1/emis')->name('api.v1.emis.')->group(function () {
+        Route::get('students', [EmisJsonApiController::class, 'students'])->name('students.index');
+        Route::get('students/{student}', [EmisJsonApiController::class, 'showStudent'])->name('students.show');
+        Route::get('gurus', [EmisJsonApiController::class, 'gurus'])->name('gurus.index');
+        Route::get('rombels', [EmisJsonApiController::class, 'rombels'])->name('rombels.index');
+    });
 
     // Modul tahap berikutnya
     Route::get('modul/{module}', ModulePlaceholderController::class)
@@ -58,4 +68,7 @@ if (app()->environment('local')) {
     Route::post('demo-login', DemoLoginController::class)->name('demo.login');
 }
 
+require __DIR__.'/superadmin.php';
+require __DIR__.'/wali_kelas.php';
+require __DIR__.'/guru_mapel.php';
 require __DIR__.'/settings.php';

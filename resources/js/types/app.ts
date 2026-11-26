@@ -10,6 +10,9 @@ export type TeacherProfile = {
     motto: string | null;
     nama_madrasah: string;
     npsn: string | null;
+    nsm?: string | null;
+    kemenag_kab?: string | null;
+    tempat_surat?: string | null;
     alamat: string | null;
     desa: string | null;
     kecamatan: string | null;
@@ -21,6 +24,10 @@ export type TeacherProfile = {
     website: string | null;
     nama_kepala_madrasah: string | null;
     nip_kepala_madrasah: string | null;
+    operator_nama?: string | null;
+    operator_hp?: string | null;
+    logo_kiri?: string | null;
+    logo_kanan?: string | null;
 };
 
 export type LegalDocumentType = 'logo' | 'ttd_kepala' | 'ttd_guru' | 'stempel';
@@ -71,6 +78,7 @@ export type BerandaStats = {
     male: number;
     female: number;
     classes: number;
+    gurus?: number;
     documents: number;
     documents_required: number;
     profile_completeness: number;

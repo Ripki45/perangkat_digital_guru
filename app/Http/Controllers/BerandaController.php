@@ -45,7 +45,7 @@ class BerandaController extends Controller
         return Inertia::render('Beranda', [
             'profile' => $profile?->only([
                 'nama_guru', 'nip', 'jabatan', 'mata_pelajaran', 'kelas_wali',
-                'nama_madrasah', 'npsn', 'alamat', 'kecamatan', 'kabupaten',
+                'nama_madrasah', 'npsn', 'nsm', 'alamat', 'kecamatan', 'kabupaten',
                 'provinsi', 'tahun_ajaran', 'semester', 'nama_kepala_madrasah',
                 'motto',
             ]),
@@ -54,6 +54,7 @@ class BerandaController extends Controller
                 'male' => $students->where('jenis_kelamin', 'L')->count(),
                 'female' => $students->where('jenis_kelamin', 'P')->count(),
                 'classes' => $classes->count(),
+                'gurus' => $user->gurus()->count(),
                 'documents' => $documents->count(),
                 'documents_required' => count(LegalDocument::TYPES),
                 'profile_completeness' => $profile?->completeness() ?? 0,
