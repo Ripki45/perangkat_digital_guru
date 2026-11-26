@@ -54,7 +54,13 @@ withDefaults(
                     stroke-linecap="round"
                     opacity="0.45"
                 />
-                <circle cx="20" cy="17.6" r="1.3" fill="#f2d583" opacity="0.85" />
+                <circle
+                    cx="20"
+                    cy="17.6"
+                    r="1.3"
+                    fill="#f2d583"
+                    opacity="0.85"
+                />
             </svg>
         </div>
 
@@ -62,7 +68,9 @@ withDefaults(
             <span
                 class="truncate font-serif text-[15px] font-bold tracking-tight"
                 :class="
-                    variant === 'sidebar' ? 'text-white' : 'text-[#073f24]'
+                    variant === 'sidebar'
+                        ? 'text-white'
+                        : 'text-[#073f24] dark:text-white'
                 "
             >
                 Perangkat Guru
@@ -70,9 +78,7 @@ withDefaults(
             <span
                 class="truncate text-[9px] font-semibold tracking-[0.19em] uppercase"
                 :class="
-                    variant === 'sidebar'
-                        ? 'text-[#e8c96b]'
-                        : 'text-[#a87c00]'
+                    variant === 'sidebar' ? 'text-[#e8c96b]' : 'text-[#a87c00]'
                 "
             >
                 Madrasah Ibtidaiyah

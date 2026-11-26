@@ -108,6 +108,14 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->hasMany(RdmScore::class);
     }
 
+    /**
+     * @return HasMany<Mapel, $this>
+     */
+    public function mapels(): HasMany
+    {
+        return $this->hasMany(Mapel::class);
+    }
+
     public function isSuperadmin(): bool
     {
         return $this->role === UserRole::Superadmin;

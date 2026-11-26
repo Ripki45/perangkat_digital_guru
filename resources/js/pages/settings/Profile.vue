@@ -39,6 +39,23 @@ const user = computed(() => page.props.auth.user);
             description="Update your name and email address"
         />
 
+        <div
+            class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#107c41]/25 bg-[#107c41]/[0.04] p-4 text-xs"
+        >
+            <div>
+                <p class="font-bold text-foreground">
+                    Biodata Guru, Profil Lembaga &amp; Kop Surat EMIS 4.0
+                </p>
+                <p class="mt-0.5 text-muted-foreground">
+                    Kelola NIP, NUPTK, NSM/NPSN madrasah, logo kop surat, dan
+                    operator EMIS di halaman Identitas.
+                </p>
+            </div>
+            <Button variant="outline" size="sm" as-child>
+                <Link href="/identitas">Buka Profil Madrasah</Link>
+            </Button>
+        </div>
+
         <Form
             v-bind="ProfileController.update.form()"
             class="space-y-6"

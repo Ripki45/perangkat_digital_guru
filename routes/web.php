@@ -4,6 +4,7 @@ use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\Api\V1\EmisJsonApiController;
 use App\Http\Controllers\BerandaController;
 use App\Http\Controllers\CekNisnController;
+use App\Http\Controllers\DataMadrasahController;
 use App\Http\Controllers\DemoLoginController;
 use App\Http\Controllers\LegalDocumentController;
 use App\Http\Controllers\ModulePlaceholderController;
@@ -30,9 +31,14 @@ Route::middleware(['auth'])->group(function () {
         ->where('current_team', '[A-Za-z0-9-]+')
         ->name('team.dashboard');
 
-    // Identitas guru masing-masing
+    // Identitas guru & profil lembaga madrasah (BIODATA)
+    Route::get('data-madrasah', [DataMadrasahController::class, 'edit'])->name('data-madrasah.edit');
+    Route::put('data-madrasah', [DataMadrasahController::class, 'update'])->name('data-madrasah.update');
+
     Route::get('identitas', [TeacherProfileController::class, 'edit'])->name('identitas.edit');
     Route::put('identitas', [TeacherProfileController::class, 'update'])->name('identitas.update');
+    Route::post('identitas/reset-default', [TeacherProfileController::class, 'resetDefault'])->name('identitas.reset-default');
+    Route::put('identitas/akun', [TeacherProfileController::class, 'updateAccount'])->name('identitas.account');
 
     // Preview aset legalitas agar bisa tampil di dokumen cetak semua guru
     Route::get('legalitas/{legalDocument}/preview', [LegalDocumentController::class, 'preview'])->name('legalitas.preview');

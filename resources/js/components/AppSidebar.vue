@@ -17,7 +17,7 @@ import {
     useSidebar,
 } from '@/components/ui/sidebar';
 import { useInitials } from '@/composables/useInitials';
-import { moduleGroups } from '@/lib/modules';
+import { berandaNavItem, moduleGroups } from '@/lib/modules';
 
 const page = usePage();
 const { state } = useSidebar();
@@ -55,9 +55,11 @@ const semester = computed(() => profile.value?.semester || 'Ganjil');
     <Sidebar
         collapsible="icon"
         variant="inset"
-        class="[&_[data-sidebar=sidebar]]:bg-[linear-gradient(180deg,#073f24_0%,#062f1c_100%)]"
+        class="[&_[data-sidebar=sidebar]]:border-r [&_[data-sidebar=sidebar]]:border-slate-200 [&_[data-sidebar=sidebar]]:bg-slate-50/70 dark:[&_[data-sidebar=sidebar]]:border-white/10 dark:[&_[data-sidebar=sidebar]]:bg-[#062214]"
     >
-        <SidebarHeader class="gap-3 border-b border-white/10 px-3 pt-4 pb-3">
+        <SidebarHeader
+            class="gap-3 border-b border-slate-200/80 px-3 pt-4 pb-3 dark:border-white/10"
+        >
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton
@@ -67,7 +69,7 @@ const semester = computed(() => profile.value?.semester || 'Ganjil');
                     >
                         <Link href="/beranda" class="flex items-center gap-3">
                             <MadrasahBrand
-                                variant="sidebar"
+                                variant="light"
                                 :compact="state === 'collapsed'"
                             />
                         </Link>
@@ -77,11 +79,11 @@ const semester = computed(() => profile.value?.semester || 'Ganjil');
 
             <Link
                 href="/identitas"
-                class="group/profile flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.055] p-2.5 transition-colors group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:border-transparent group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 hover:border-[#c99700]/35 hover:bg-white/[0.09]"
+                class="group/profile flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-2.5 shadow-2xs transition-colors group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:border-transparent group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 hover:border-emerald-300 hover:bg-emerald-50/40 dark:border-white/10 dark:bg-white/[0.055] dark:hover:border-[#c99700]/35 dark:hover:bg-white/[0.09]"
                 title="Buka identitas guru"
             >
                 <Avatar
-                    class="size-9 shrink-0 overflow-hidden rounded-lg ring-2 ring-[#c99700]/60 ring-offset-2 ring-offset-[#073f24]"
+                    class="size-9 shrink-0 overflow-hidden rounded-lg ring-2 ring-[#c99700]/60 ring-offset-2 ring-offset-white dark:ring-offset-[#073f24]"
                 >
                     <AvatarFallback
                         class="rounded-lg bg-gradient-to-br from-[#c99700] to-[#a87c00] text-[11px] font-bold text-white"
@@ -92,38 +94,46 @@ const semester = computed(() => profile.value?.semester || 'Ganjil');
                 <div
                     class="min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden"
                 >
-                    <p class="truncate text-[12px] font-semibold text-white">
+                    <p
+                        class="truncate text-[12px] font-semibold text-slate-900 dark:text-white"
+                    >
                         {{ teacherName }}
                     </p>
-                    <p class="mt-0.5 truncate text-[10px] text-[#e8c96b]">
+                    <p
+                        class="mt-0.5 truncate text-[10px] font-medium text-[#107c41] dark:text-[#e8c96b]"
+                    >
                         {{ madrasahName }}
                     </p>
-                    <p class="mt-0.5 truncate text-[9.5px] text-white/45">
+                    <p
+                        class="mt-0.5 truncate text-[9.5px] text-slate-500 dark:text-white/45"
+                    >
                         Tahun {{ academicYear }} · {{ semester }}
                     </p>
                 </div>
                 <ChevronRight
-                    class="size-3.5 shrink-0 text-white/35 transition-transform group-hover/profile:translate-x-0.5 group-data-[collapsible=icon]:hidden"
+                    class="size-3.5 shrink-0 text-slate-400 transition-transform group-hover/profile:translate-x-0.5 group-data-[collapsible=icon]:hidden dark:text-white/35"
                 />
             </Link>
         </SidebarHeader>
 
         <SidebarContent>
-            <SidebarNav :groups="visibleGroups" />
+            <SidebarNav :home-item="berandaNavItem" :groups="visibleGroups" />
         </SidebarContent>
 
-        <SidebarFooter class="gap-2 border-t border-white/10 px-3 pt-3 pb-2">
+        <SidebarFooter
+            class="gap-2 border-t border-slate-200/80 px-3 pt-3 pb-2 dark:border-white/10"
+        >
             <div
-                class="rounded-xl border border-[#c99700]/25 bg-gradient-to-br from-[#c99700]/15 to-transparent p-3 group-data-[collapsible=icon]:hidden"
+                class="rounded-xl border border-[#c99700]/30 bg-amber-50/60 p-3 group-data-[collapsible=icon]:hidden dark:border-[#c99700]/25 dark:bg-gradient-to-br dark:from-[#c99700]/15 dark:to-transparent"
             >
                 <div
-                    class="flex items-center gap-1.5 text-[9px] font-semibold tracking-[0.16em] text-[#e8c96b] uppercase"
+                    class="flex items-center gap-1.5 text-[9px] font-semibold tracking-[0.16em] text-[#9a7200] uppercase dark:text-[#e8c96b]"
                 >
                     <Sparkles class="size-3" />
                     Kurikulum Merdeka · Panca Cinta
                 </div>
                 <p
-                    class="mt-1.5 line-clamp-3 font-serif text-[11px] leading-relaxed text-white/60 italic"
+                    class="mt-1.5 line-clamp-3 font-serif text-[11px] leading-relaxed text-slate-600 italic dark:text-white/60"
                 >
                     “{{ motto }}”
                 </p>

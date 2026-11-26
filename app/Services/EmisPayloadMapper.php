@@ -230,6 +230,41 @@ class EmisPayloadMapper
     }
 
     /**
+     * @return list<array{kode: string, nama: string, kelompok: string, kkm: int, jtm: int, tingkat: string}>
+     */
+    public static function defaultMapels(): array
+    {
+        return [
+            ['kode' => 'QH', 'nama' => "Al-Qur'an Hadis", 'kelompok' => 'PAI & Bahasa Arab', 'kkm' => 75, 'jtm' => 2, 'tingkat' => '1-6'],
+            ['kode' => 'AA', 'nama' => 'Akidah Akhlak', 'kelompok' => 'PAI & Bahasa Arab', 'kkm' => 75, 'jtm' => 2, 'tingkat' => '1-6'],
+            ['kode' => 'FIK', 'nama' => 'Fikih', 'kelompok' => 'PAI & Bahasa Arab', 'kkm' => 75, 'jtm' => 2, 'tingkat' => '1-6'],
+            ['kode' => 'SKI', 'nama' => 'Sejarah Kebudayaan Islam', 'kelompok' => 'PAI & Bahasa Arab', 'kkm' => 75, 'jtm' => 2, 'tingkat' => '3-6'],
+            ['kode' => 'ARB', 'nama' => 'Bahasa Arab', 'kelompok' => 'PAI & Bahasa Arab', 'kkm' => 75, 'jtm' => 2, 'tingkat' => '1-6'],
+            ['kode' => 'PP', 'nama' => 'Pendidikan Pancasila', 'kelompok' => 'Umum', 'kkm' => 75, 'jtm' => 4, 'tingkat' => '1-6'],
+            ['kode' => 'IND', 'nama' => 'Bahasa Indonesia', 'kelompok' => 'Umum', 'kkm' => 75, 'jtm' => 6, 'tingkat' => '1-6'],
+            ['kode' => 'MTK', 'nama' => 'Matematika', 'kelompok' => 'Umum', 'kkm' => 75, 'jtm' => 5, 'tingkat' => '1-6'],
+            ['kode' => 'IPAS', 'nama' => 'IPAS', 'kelompok' => 'Umum', 'kkm' => 75, 'jtm' => 5, 'tingkat' => '3-6'],
+            ['kode' => 'PJK', 'nama' => 'PJOK', 'kelompok' => 'Umum', 'kkm' => 75, 'jtm' => 3, 'tingkat' => '1-6'],
+            ['kode' => 'SBD', 'nama' => 'Seni Budaya & Prakarya', 'kelompok' => 'Umum', 'kkm' => 75, 'jtm' => 3, 'tingkat' => '1-6'],
+            ['kode' => 'ING', 'nama' => 'Bahasa Inggris', 'kelompok' => 'Umum', 'kkm' => 75, 'jtm' => 2, 'tingkat' => '1-6'],
+            ['kode' => 'SUN', 'nama' => 'Bahasa Daerah / Sunda', 'kelompok' => 'Muatan Lokal', 'kkm' => 75, 'jtm' => 2, 'tingkat' => '1-6'],
+            ['kode' => 'MUL', 'nama' => 'Muatan Lokal / BTQ', 'kelompok' => 'Muatan Lokal', 'kkm' => 75, 'jtm' => 2, 'tingkat' => '1-6'],
+        ];
+    }
+
+    public static function ensureDefaultMapels(User $user): void
+    {
+        if ($user->mapels()->doesntExist()) {
+            foreach (self::defaultMapels() as $mapel) {
+                $user->mapels()->firstOrCreate(
+                    ['kode' => $mapel['kode']],
+                    $mapel,
+                );
+            }
+        }
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     public static function sampleStudents(): array

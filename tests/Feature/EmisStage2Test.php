@@ -274,7 +274,29 @@ test('identitas update saves kop surat emis fields and shares them via inertia',
         ->assertInertia(fn (Assert $page) => $page
             ->where('teacherProfile.nsm', '111132070001')
             ->where('teacherProfile.operator_nama', 'Operator MIN 1')
+            ->has('account.email')
         );
+
+    // Reset Default MIN 1
+    $this->actingAs($user)
+        ->post('/identitas/reset-default')
+        ->assertRedirect();
+
+    $reset = $user->fresh()?->teacherProfile;
+    expect($reset?->nama_madrasah)->toBe('MADRASAH IBTIDAIYAH NEGERI 1 CIAMIS');
+    expect($reset?->nsm)->toBe('111132070001');
+    expect($reset?->logo_kiri)->toBeNull();
+
+    // Update account login info from /identitas
+    $this->actingAs($user)
+        ->put('/identitas/akun', [
+            'name' => 'Operator EMIS Baru',
+            'email' => 'operator.baru@min1ciamis.test',
+        ])
+        ->assertRedirect();
+
+    expect($user->fresh()?->name)->toBe('Operator EMIS Baru');
+    expect($user->fresh()?->email)->toBe('operator.baru@min1ciamis.test');
 });
 
 test('beranda renders role-aware dashboard with emis stats for all roles', function () {
@@ -296,4 +318,79 @@ test('beranda renders role-aware dashboard with emis stats for all roles', funct
             ->component('Beranda')
             ->has('stats.gurus')
         );
+});
+
+test('biodata data madrasah and mapel rombel pages and crud work properly', function () {
+    $guruMapel = User::factory()->create(['role' => UserRole::GuruMapel]);
+    $wali = User::factory()->create(['role' => UserRole::WaliKelas]);
+
+    // Data Madrasah
+    $this->actingAs($wali)
+        ->get('/data-madrasah')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Biodata/DataMadrasah')
+            ->has('defaults')
+        );
+
+    $this->actingAs($wali)
+        ->put('/data-madrasah', [
+            'nama_madrasah' => 'MIN 1 CIAMIS BIODATA',
+            'nsm' => '111132070001',
+            'npsn' => '60708447',
+            'kemenag_kab' => 'Kemenag Kab. Ciamis',
+            'tahun_ajaran' => '2026/2027',
+            'semester' => 'Ganjil',
+            'tempat_surat' => 'Ciamis',
+        ])
+        ->assertRedirect();
+
+    expect($wali->fresh()?->teacherProfile?->nama_madrasah)->toBe('MIN 1 CIAMIS BIODATA');
+
+    // Data Mapel & Rombel
+    $this->actingAs($guruMapel)
+        ->get('/mapel-rombel')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Siswa/Rombel')
+            ->has('mapels', 14)
+            ->where('canManageRombel', false)
+        );
+
+    $this->actingAs($guruMapel)
+        ->post('/mapel', [
+            'kode' => 'TAHFIDZ',
+            'nama' => "Tahfidz Al-Qur'an",
+            'kelompok' => 'Muatan Lokal',
+            'kkm' => 80,
+            'jtm' => 2,
+            'tingkat' => '1-6',
+        ])
+        ->assertRedirect();
+
+    $mapel = $guruMapel->mapels()->where('kode', 'TAHFIDZ')->firstOrFail();
+    expect($mapel->nama)->toBe("Tahfidz Al-Qur'an");
+
+    $this->actingAs($guruMapel)
+        ->put("/mapel/{$mapel->id}", [
+            'kode' => 'TAHFIDZ',
+            'nama' => 'Tahfidz Juz 30',
+            'kelompok' => 'Muatan Lokal',
+            'kkm' => 82,
+            'jtm' => 3,
+            'tingkat' => '1-6',
+        ])
+        ->assertRedirect();
+
+    expect($mapel->fresh()?->kkm)->toBe(82);
+
+    $this->actingAs($wali)
+        ->delete("/mapel/{$mapel->id}")
+        ->assertForbidden();
+
+    $this->actingAs($guruMapel)
+        ->delete("/mapel/{$mapel->id}")
+        ->assertRedirect();
+
+    expect($guruMapel->mapels()->where('kode', 'TAHFIDZ')->exists())->toBeFalse();
 });

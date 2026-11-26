@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
+use App\Models\Mapel;
 use App\Models\Rombel;
 use App\Models\User;
 use App\Services\EmisPayloadMapper;
@@ -18,16 +20,11 @@ class RombelController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if ($user->rombels()->doesntExist()) {
-            foreach (EmisPayloadMapper::defaultRombels() as $rombel) {
-                $user->rombels()->firstOrCreate(
-                    ['kode' => $rombel['kode']],
-                    ['tingkat' => $rombel['tingkat'], 'wali' => $rombel['wali'] ?: null],
-                );
-            }
-        }
+        EmisPayloadMapper::ensureDefaultRombels($user);
+        EmisPayloadMapper::ensureDefaultMapels($user);
 
         $rombels = $user->rombels()->orderBy('tingkat')->orderBy('kode')->get();
+        $mapels = $user->mapels()->orderBy('kelompok')->orderBy('nama')->get();
         $students = $user->students()->orderBy('kelas')->orderBy('nama')->get();
         $gurus = $user->gurus()->where('status_aktif', 'Aktif')->orderBy('nama')->get();
 
@@ -38,8 +35,19 @@ class RombelController extends Controller
                 'kode' => $rombel->kode,
                 'wali' => $rombel->wali ?? '',
             ])->values(),
+            'mapels' => $mapels->map(fn (Mapel $mapel): array => [
+                'id' => $mapel->id,
+                'kode' => $mapel->kode,
+                'nama' => $mapel->nama,
+                'kelompok' => $mapel->kelompok,
+                'kkm' => $mapel->kkm,
+                'jtm' => $mapel->jtm,
+                'tingkat' => $mapel->tingkat,
+                'aktif' => $mapel->aktif,
+            ])->values(),
             'students' => $students->map(fn ($student): array => $student->toEmisPayload())->values(),
             'gurus' => $gurus->map(fn ($guru): array => $guru->toEmisPayload())->values(),
+            'canManageRombel' => in_array($user->role, [UserRole::Superadmin, UserRole::WaliKelas], true),
         ]);
     }
 

@@ -2,6 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import {
     AlertCircle,
+    BookOpen,
     GraduationCap,
     IdCard,
     Info,
@@ -13,11 +14,19 @@ import {
 import { computed, ref } from 'vue';
 import PageHeader from '@/components/app/PageHeader.vue';
 import {
+    buildBukuIndukSheetHtml,
     buildOfficialKopHtml,
     escapeHtml,
     openPrintWindowWithContent,
 } from '@/components/sim-emis/EmisPrintHelpers';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { RDM_SEMESTERS } from '@/types/emis';
 import type { EmisMadrasahProfile, EmisStudent } from '@/types/emis';
 
@@ -138,6 +147,21 @@ const printSummary = () => {
     `;
 
     openPrintWindowWithContent(html, `Ringkasan NISN - ${s.nama}`);
+};
+
+const biodataOpen = ref(false);
+const biodataHtml = computed(() =>
+    foundStudent.value
+        ? buildBukuIndukSheetHtml(foundStudent.value, props.madrasahProfile)
+        : '',
+);
+
+const printBiodataA4 = () => {
+    if (!biodataHtml.value || !foundStudent.value) return;
+    openPrintWindowWithContent(
+        biodataHtml.value,
+        `Buku Induk - ${foundStudent.value.nama}`,
+    );
 };
 </script>
 
@@ -291,15 +315,26 @@ const printSummary = () => {
                             {{ foundStudent.tglLahir || '-' }}
                         </div>
                     </div>
-                    <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        @click="printSummary"
-                    >
-                        <Printer class="size-3.5" />
-                        Cetak Ringkas
-                    </Button>
+                    <div class="flex flex-wrap gap-2">
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            @click="biodataOpen = true"
+                        >
+                            <BookOpen class="size-3.5" />
+                            Biodata Buku Induk (A4)
+                        </Button>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            @click="printSummary"
+                        >
+                            <Printer class="size-3.5" />
+                            Cetak Ringkas
+                        </Button>
+                    </div>
                 </div>
 
                 <div class="space-y-3 p-4 text-xs">
@@ -417,4 +452,40 @@ const printSummary = () => {
             </div>
         </div>
     </div>
+
+    <Dialog :open="biodataOpen" @update:open="biodataOpen = $event">
+        <DialogContent
+            class="flex max-h-[90vh] max-w-4xl flex-col overflow-hidden p-0"
+        >
+            <DialogHeader
+                class="flex flex-row items-center justify-between border-b bg-emerald-900 px-5 py-3 text-white"
+            >
+                <div>
+                    <DialogTitle
+                        class="flex items-center gap-2 text-sm font-bold text-white"
+                    >
+                        <BookOpen class="size-4" />
+                        Lembar Biodata / Buku Induk Siswa MI — EMIS 4.0
+                    </DialogTitle>
+                    <DialogDescription class="sr-only">
+                        Pratinjau dan cetak Biodata Buku Induk Siswa
+                    </DialogDescription>
+                </div>
+                <Button
+                    type="button"
+                    size="sm"
+                    class="mr-6 bg-emerald-500 font-bold text-slate-950 hover:bg-emerald-400"
+                    @click="printBiodataA4"
+                >
+                    <Printer class="size-3.5" />
+                    Cetak A4
+                </Button>
+            </DialogHeader>
+            <!-- eslint-disable-next-line vue/no-v-html -->
+            <div
+                class="flex-1 overflow-y-auto bg-slate-100 p-5"
+                v-html="biodataHtml"
+            />
+        </DialogContent>
+    </Dialog>
 </template>

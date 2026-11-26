@@ -2,20 +2,22 @@ import {
     ArrowRightLeft,
     BookOpenCheck,
     BookOpenText,
+    Building2,
     CalendarCheck,
     CalendarClock,
     CalendarDays,
     CalendarRange,
     ChartColumn,
     ClipboardCheck,
+    ClipboardList,
     ClipboardPen,
     Database,
     FileSearch,
     FileSpreadsheet,
+    FolderOpen,
     GraduationCap,
     House,
-    IdCard,
-    Layers,
+    LayoutGrid,
     LibraryBig,
     ListChecks,
     NotebookPen,
@@ -27,7 +29,6 @@ import {
     SquareCheckBig,
     Stamp,
     Target,
-    Users,
     UsersRound,
 } from '@lucide/vue';
 import type { LucideIcon } from '@lucide/vue';
@@ -58,31 +59,82 @@ export type ModuleInfo = ModuleItem & {
 
 const placeholder = (slug: string) => `/modul/${slug}`;
 
+export const berandaNavItem: ModuleItem = {
+    slug: 'beranda',
+    title: 'Beranda & Mukodimah',
+    href: '/beranda',
+    icon: House,
+    description:
+        'Ringkasan aktivitas, statistik kelas, dan pintasan cepat menuju seluruh perangkat digital Anda.',
+    features: [],
+    ready: true,
+};
+
 export const moduleGroups: ModuleGroup[] = [
     {
-        id: 'beranda-profil',
-        title: 'Beranda & Profil',
-        icon: House,
+        id: 'biodata',
+        title: 'BIODATA',
+        icon: FolderOpen,
         items: [
             {
-                slug: 'beranda',
-                title: 'Beranda Mukodimah',
-                href: '/beranda',
-                icon: House,
+                slug: 'data-madrasah',
+                title: 'Data Madrasah',
+                href: '/data-madrasah',
+                icon: GraduationCap,
                 description:
-                    'Ringkasan aktivitas, statistik kelas, dan pintasan cepat menuju seluruh perangkat digital Anda.',
+                    'Data lembaga madrasah, NSM/NPSN, alamat, kepala madrasah, operator EMIS, dan logo kop surat resmi.',
                 features: [],
                 ready: true,
             },
             {
                 slug: 'identitas',
-                title: 'Identitas Guru & Madrasah',
+                title: 'Identitas dan Profil Guru',
                 href: '/identitas',
-                icon: IdCard,
+                icon: Building2,
                 description:
-                    'Data induk guru, madrasah, kepala madrasah, tahun ajaran, dan semester yang dipakai otomatis pada semua dokumen.',
+                    'Biodata induk guru, NIP/NUPTK, jabatan, tahun ajaran, semester, motto, serta keamanan akun login.',
                 features: [],
                 ready: true,
+            },
+            {
+                slug: 'mapel-rombel',
+                title: 'Data Mapel & Rombel',
+                href: '/mapel-rombel',
+                icon: ClipboardList,
+                description:
+                    'Pengelolaan mata pelajaran Kurikulum MI (KKM/JTM), rombongan belajar Kelas 1–6, wali kelas, dan kenaikan kelas.',
+                features: [],
+                ready: true,
+                roles: ['superadmin', 'wali_kelas', 'guru_mapel'],
+            },
+            {
+                slug: 'siswa',
+                title: 'Data Siswa dan Kelas',
+                href: '/siswa',
+                icon: LayoutGrid,
+                description:
+                    'Kelola data induk peserta didik berstandar EMIS 4.0: form 6 langkah, pas foto 3x4, cetak Buku Induk, KTS, dan impor massal.',
+                features: [],
+                ready: true,
+                roles: ['superadmin', 'wali_kelas'],
+            },
+        ],
+    },
+    {
+        id: 'kelembagaan-ai',
+        title: 'Kelembagaan & AI',
+        icon: Sparkles,
+        items: [
+            {
+                slug: 'gtk',
+                title: 'Data Guru & GTK EMIS',
+                href: '/gtk',
+                icon: UsersRound,
+                description:
+                    'Kelola data Pendidik dan Tenaga Kependidikan berstandar EMIS 4.0: NPK, NUPTK, Sertifikasi, JTM, dan rekap kepegawaian.',
+                features: [],
+                ready: true,
+                roles: ['superadmin'],
             },
             {
                 slug: 'legalitas',
@@ -91,17 +143,6 @@ export const moduleGroups: ModuleGroup[] = [
                 icon: Stamp,
                 description:
                     'Pusat berkas legalitas: logo madrasah, tanda tangan guru, tanda tangan kepala madrasah, dan stempel resmi.',
-                features: [],
-                ready: true,
-                roles: ['superadmin'],
-            },
-            {
-                slug: 'gtk',
-                title: 'Data Guru & GTK EMIS',
-                href: '/gtk',
-                icon: GraduationCap,
-                description:
-                    'Kelola data Pendidik dan Tenaga Kependidikan berstandar EMIS 4.0: NPK, NUPTK, Sertifikasi, JTM, dan rekap kepegawaian.',
                 features: [],
                 ready: true,
                 roles: ['superadmin'],
@@ -292,28 +333,6 @@ export const moduleGroups: ModuleGroup[] = [
         icon: UsersRound,
         items: [
             {
-                slug: 'siswa',
-                title: 'Master Data Siswa',
-                href: '/siswa',
-                icon: Users,
-                description:
-                    'Kelola data induk peserta didik berstandar EMIS 4.0: form 6 langkah, pas foto 3x4, cetak Buku Induk, KTS, dan impor massal.',
-                features: [],
-                ready: true,
-                roles: ['superadmin', 'wali_kelas'],
-            },
-            {
-                slug: 'rombel',
-                title: 'Rombel & Kenaikan Kelas',
-                href: '/rombel',
-                icon: Layers,
-                description:
-                    'Kelola rombongan belajar Kelas 1–6 MI, wali kelas, pindah rombel massal, dan proses kelulusan kelas 6.',
-                features: [],
-                ready: true,
-                roles: ['superadmin', 'wali_kelas'],
-            },
-            {
                 slug: 'mutasi',
                 title: 'Mutasi & Surat Pindah',
                 href: '/mutasi',
@@ -441,14 +460,22 @@ export const moduleGroups: ModuleGroup[] = [
     },
 ];
 
-export const modules: ModuleInfo[] = moduleGroups.flatMap((group) =>
-    group.items.map((item) => ({
-        ...item,
-        groupId: group.id,
-        groupTitle: group.title,
-        groupIcon: group.icon,
-    })),
-);
+export const modules: ModuleInfo[] = [
+    {
+        ...berandaNavItem,
+        groupId: 'home',
+        groupTitle: 'Beranda & Mukodimah',
+        groupIcon: House,
+    },
+    ...moduleGroups.flatMap((group) =>
+        group.items.map((item) => ({
+            ...item,
+            groupId: group.id,
+            groupTitle: group.title,
+            groupIcon: group.icon,
+        })),
+    ),
+];
 
 export const moduleMap = new Map(
     modules.map((module) => [module.slug, module]),
@@ -472,15 +499,15 @@ export function canAccessModule(
 }
 
 const quickSlugs = [
+    'data-madrasah',
+    'identitas',
+    'mapel-rombel',
     'siswa',
-    'rombel',
-    'mutasi',
     'nilai-analisis',
     'rekap-emis',
     'cek-nisn',
     'gtk',
-    'identitas',
-    'legalitas',
+    'asisten-ai',
 ];
 
 export const quickModules: ModuleInfo[] = quickSlugs

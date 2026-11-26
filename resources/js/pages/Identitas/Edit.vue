@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     BadgeCheck,
@@ -7,18 +7,22 @@ import {
     Globe,
     IdCard,
     ImagePlus,
+    KeyRound,
     LoaderCircle,
     Mail,
     MapPin,
     Phone,
+    RotateCcw,
     Save,
     School,
+    ShieldCheck,
     Sparkles,
     Trash2,
     UserRound,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { toast } from 'vue-sonner';
+import ConfirmDialog from '@/components/app/ConfirmDialog.vue';
 import FormField from '@/components/app/FormField.vue';
 import PageHeader from '@/components/app/PageHeader.vue';
 import { buildOfficialKopHtml } from '@/components/sim-emis/EmisPrintHelpers';
@@ -37,6 +41,11 @@ const props = defineProps<{
         nama_madrasah: string;
     };
     completeness: number;
+    fallbackLogoKiri?: string;
+    account?: {
+        name: string;
+        email: string;
+    };
 }>();
 
 defineOptions({
@@ -141,11 +150,86 @@ const kopPreviewHtml = computed(() => {
         kepalaNip: form.nip_kepala_madrasah || '-',
         operatorNama: form.operator_nama || '-',
         operatorHp: form.operator_hp || '-',
-        logoKiri: form.logo_kiri || '',
+        logoKiri: form.logo_kiri || props.fallbackLogoKiri || '',
         logoKanan: form.logo_kanan || '',
     };
     return buildOfficialKopHtml(emisProfile);
 });
+
+const confirmResetOpen = ref(false);
+const resetting = ref(false);
+
+const executeResetDefault = () => {
+    resetting.value = true;
+    router.post(
+        '/identitas/reset-default',
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                form.nama_madrasah =
+                    props.profile?.nama_madrasah ??
+                    'MADRASAH IBTIDAIYAH NEGERI 1 CIAMIS';
+                form.tahun_ajaran = props.profile?.tahun_ajaran ?? '2026/2027';
+                form.semester = props.profile?.semester ?? 'Ganjil';
+                form.nsm = props.profile?.nsm ?? '111132070001';
+                form.npsn = props.profile?.npsn ?? '60708447';
+                form.kemenag_kab =
+                    props.profile?.kemenag_kab ??
+                    'KANTOR KEMENTERIAN AGAMA KABUPATEN CIAMIS';
+                form.alamat =
+                    props.profile?.alamat ??
+                    'Jl. Raya Panjalu - Kawali Dusun Sukamaju Desa Maparah Kec. Panjalu Kab. Ciamis';
+                form.tempat_surat = props.profile?.tempat_surat ?? 'Ciamis';
+                form.website =
+                    props.profile?.website ?? 'www.min1ciamis.sch.id';
+                form.email_madrasah =
+                    props.profile?.email_madrasah ?? 'min1ciamis@kemenag.go.id';
+                form.nama_kepala_madrasah =
+                    props.profile?.nama_kepala_madrasah ??
+                    'H. Dede Hidayat, S.Ag., M.Pd.I.';
+                form.nip_kepala_madrasah =
+                    props.profile?.nip_kepala_madrasah ?? '197204151998031003';
+                form.operator_nama =
+                    props.profile?.operator_nama ??
+                    'Operator EMIS MIN 1 Ciamis';
+                form.operator_hp = props.profile?.operator_hp ?? '081234567890';
+                form.logo_kiri = props.profile?.logo_kiri ?? '';
+                form.logo_kanan = props.profile?.logo_kanan ?? '';
+                confirmResetOpen.value = false;
+            },
+            onFinish: () => {
+                resetting.value = false;
+            },
+        },
+    );
+};
+
+const accountForm = useForm({
+    name: props.account?.name ?? props.defaults.nama_guru,
+    email: props.account?.email ?? '',
+});
+
+const submitAccount = () => {
+    accountForm.put('/identitas/akun', {
+        preserveScroll: true,
+    });
+};
+
+const passwordForm = useForm({
+    current_password: '',
+    password: '',
+    password_confirmation: '',
+});
+
+const submitPassword = () => {
+    passwordForm.put('/settings/password', {
+        preserveScroll: true,
+        onSuccess: () => {
+            passwordForm.reset();
+        },
+    });
+};
 
 const trackedValues = computed(() => [
     form.nama_guru,
@@ -204,6 +288,15 @@ const websitePlaceholder = 'https://mialhikmah.sch.id';
                     </Link>
                 </Button>
                 <Button
+                    type="button"
+                    variant="outline"
+                    :disabled="resetting"
+                    @click="confirmResetOpen = true"
+                >
+                    <RotateCcw class="size-4" />
+                    Reset Default MIN 1
+                </Button>
+                <Button
                     type="submit"
                     form="identitas-form"
                     :disabled="form.processing"
@@ -215,552 +308,717 @@ const websitePlaceholder = 'https://mialhikmah.sch.id';
             </template>
         </PageHeader>
 
-        <form
-            id="identitas-form"
-            class="grid items-start gap-5 xl:grid-cols-[1.55fr_1fr]"
-            @submit.prevent="submit"
-        >
+        <div class="grid items-start gap-5 xl:grid-cols-[1.55fr_1fr]">
             <div class="space-y-5">
-                <!-- Data guru -->
-                <section
-                    class="rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(7,63,36,0.04)]"
+                <form
+                    id="identitas-form"
+                    class="space-y-5"
+                    @submit.prevent="submit"
                 >
-                    <div
-                        class="flex items-center gap-3 border-b border-border/70 px-5 py-4"
+                    <!-- Data guru -->
+                    <section
+                        class="rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(7,63,36,0.04)]"
                     >
                         <div
-                            class="grid size-9 place-items-center rounded-lg bg-[#107c41]/8 text-[#107c41] ring-1 ring-[#107c41]/12"
+                            class="flex items-center gap-3 border-b border-border/70 px-5 py-4"
                         >
-                            <UserRound class="size-4" />
-                        </div>
-                        <div>
-                            <h2
-                                class="font-serif text-base font-bold text-foreground"
+                            <div
+                                class="grid size-9 place-items-center rounded-lg bg-[#107c41]/8 text-[#107c41] ring-1 ring-[#107c41]/12"
                             >
-                                Data Guru
-                            </h2>
-                            <p class="text-[11px] text-muted-foreground">
-                                Identitas utama pemilik akun perangkat digital.
-                            </p>
+                                <UserRound class="size-4" />
+                            </div>
+                            <div>
+                                <h2
+                                    class="font-serif text-base font-bold text-foreground"
+                                >
+                                    Data Guru
+                                </h2>
+                                <p class="text-[11px] text-muted-foreground">
+                                    Identitas utama pemilik akun perangkat
+                                    digital.
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="grid gap-4 p-5 sm:grid-cols-2">
-                        <div class="sm:col-span-2">
+                        <div class="grid gap-4 p-5 sm:grid-cols-2">
+                            <div class="sm:col-span-2">
+                                <FormField
+                                    label="Nama Lengkap & Gelar"
+                                    for="nama_guru"
+                                    required
+                                    :error="form.errors.nama_guru"
+                                >
+                                    <Input
+                                        id="nama_guru"
+                                        v-model="form.nama_guru"
+                                        placeholder="Contoh: Hj. Siti Aminah, S.Pd.I."
+                                    />
+                                </FormField>
+                            </div>
                             <FormField
-                                label="Nama Lengkap & Gelar"
-                                for="nama_guru"
+                                label="NIP"
+                                for="nip"
+                                :error="form.errors.nip"
+                            >
+                                <Input
+                                    id="nip"
+                                    v-model="form.nip"
+                                    placeholder="198504122010012003"
+                                />
+                            </FormField>
+                            <FormField
+                                label="NUPTK"
+                                for="nuptk"
+                                :error="form.errors.nuptk"
+                            >
+                                <Input
+                                    id="nuptk"
+                                    v-model="form.nuptk"
+                                    placeholder="Opsional"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Jabatan"
+                                for="jabatan"
+                                :error="form.errors.jabatan"
+                            >
+                                <Input
+                                    id="jabatan"
+                                    v-model="form.jabatan"
+                                    placeholder="Guru Kelas / Wali Kelas"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Mata Pelajaran"
+                                for="mata_pelajaran"
+                                :error="form.errors.mata_pelajaran"
+                            >
+                                <Input
+                                    id="mata_pelajaran"
+                                    v-model="form.mata_pelajaran"
+                                    placeholder="Guru Kelas"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Kelas Wali"
+                                for="kelas_wali"
+                                :error="form.errors.kelas_wali"
+                            >
+                                <Input
+                                    id="kelas_wali"
+                                    v-model="form.kelas_wali"
+                                    placeholder="5A"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Tahun Ajaran"
+                                for="tahun_ajaran"
                                 required
-                                :error="form.errors.nama_guru"
+                                hint="Format: 2025/2026"
+                                :error="form.errors.tahun_ajaran"
                             >
                                 <Input
-                                    id="nama_guru"
-                                    v-model="form.nama_guru"
-                                    placeholder="Contoh: Hj. Siti Aminah, S.Pd.I."
+                                    id="tahun_ajaran"
+                                    v-model="form.tahun_ajaran"
+                                    placeholder="2025/2026"
                                 />
                             </FormField>
-                        </div>
-                        <FormField
-                            label="NIP"
-                            for="nip"
-                            :error="form.errors.nip"
-                        >
-                            <Input
-                                id="nip"
-                                v-model="form.nip"
-                                placeholder="198504122010012003"
-                            />
-                        </FormField>
-                        <FormField
-                            label="NUPTK"
-                            for="nuptk"
-                            :error="form.errors.nuptk"
-                        >
-                            <Input
-                                id="nuptk"
-                                v-model="form.nuptk"
-                                placeholder="Opsional"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Jabatan"
-                            for="jabatan"
-                            :error="form.errors.jabatan"
-                        >
-                            <Input
-                                id="jabatan"
-                                v-model="form.jabatan"
-                                placeholder="Guru Kelas / Wali Kelas"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Mata Pelajaran"
-                            for="mata_pelajaran"
-                            :error="form.errors.mata_pelajaran"
-                        >
-                            <Input
-                                id="mata_pelajaran"
-                                v-model="form.mata_pelajaran"
-                                placeholder="Guru Kelas"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Kelas Wali"
-                            for="kelas_wali"
-                            :error="form.errors.kelas_wali"
-                        >
-                            <Input
-                                id="kelas_wali"
-                                v-model="form.kelas_wali"
-                                placeholder="5A"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Tahun Ajaran"
-                            for="tahun_ajaran"
-                            required
-                            hint="Format: 2025/2026"
-                            :error="form.errors.tahun_ajaran"
-                        >
-                            <Input
-                                id="tahun_ajaran"
-                                v-model="form.tahun_ajaran"
-                                placeholder="2025/2026"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Semester"
-                            for="semester"
-                            required
-                            :error="form.errors.semester"
-                        >
-                            <select
-                                id="semester"
-                                v-model="form.semester"
-                                class="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
-                            >
-                                <option value="Ganjil">Ganjil</option>
-                                <option value="Genap">Genap</option>
-                            </select>
-                        </FormField>
-                        <div class="sm:col-span-2">
                             <FormField
-                                label="Moto / Kutipan"
-                                for="motto"
-                                hint="Ditampilkan pada kartu profil di sidebar."
-                                :error="form.errors.motto"
+                                label="Semester"
+                                for="semester"
+                                required
+                                :error="form.errors.semester"
+                            >
+                                <select
+                                    id="semester"
+                                    v-model="form.semester"
+                                    class="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+                                >
+                                    <option value="Ganjil">Ganjil</option>
+                                    <option value="Genap">Genap</option>
+                                </select>
+                            </FormField>
+                            <div class="sm:col-span-2">
+                                <FormField
+                                    label="Moto / Kutipan"
+                                    for="motto"
+                                    hint="Ditampilkan pada kartu profil di sidebar."
+                                    :error="form.errors.motto"
+                                >
+                                    <Input
+                                        id="motto"
+                                        v-model="form.motto"
+                                        placeholder="Mendidik dengan hati, menumbuhkan cinta ilmu."
+                                    />
+                                </FormField>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Data madrasah -->
+                    <section
+                        class="rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(7,63,36,0.04)]"
+                    >
+                        <div
+                            class="flex items-center gap-3 border-b border-border/70 px-5 py-4"
+                        >
+                            <div
+                                class="grid size-9 place-items-center rounded-lg bg-[#c99700]/10 text-[#a87c00] ring-1 ring-[#c99700]/15"
+                            >
+                                <School class="size-4" />
+                            </div>
+                            <div>
+                                <h2
+                                    class="font-serif text-base font-bold text-foreground"
+                                >
+                                    Data Madrasah
+                                </h2>
+                                <p class="text-[11px] text-muted-foreground">
+                                    Digunakan pada kop dan identitas dokumen
+                                    resmi.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="grid gap-4 p-5 sm:grid-cols-2">
+                            <FormField
+                                label="Nama Madrasah"
+                                for="nama_madrasah"
+                                required
+                                :error="form.errors.nama_madrasah"
                             >
                                 <Input
-                                    id="motto"
-                                    v-model="form.motto"
-                                    placeholder="Mendidik dengan hati, menumbuhkan cinta ilmu."
+                                    id="nama_madrasah"
+                                    v-model="form.nama_madrasah"
+                                    placeholder="MI Al-Hikmah"
                                 />
                             </FormField>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Data madrasah -->
-                <section
-                    class="rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(7,63,36,0.04)]"
-                >
-                    <div
-                        class="flex items-center gap-3 border-b border-border/70 px-5 py-4"
-                    >
-                        <div
-                            class="grid size-9 place-items-center rounded-lg bg-[#c99700]/10 text-[#a87c00] ring-1 ring-[#c99700]/15"
-                        >
-                            <School class="size-4" />
-                        </div>
-                        <div>
-                            <h2
-                                class="font-serif text-base font-bold text-foreground"
-                            >
-                                Data Madrasah
-                            </h2>
-                            <p class="text-[11px] text-muted-foreground">
-                                Digunakan pada kop dan identitas dokumen resmi.
-                            </p>
-                        </div>
-                    </div>
-                    <div class="grid gap-4 p-5 sm:grid-cols-2">
-                        <FormField
-                            label="Nama Madrasah"
-                            for="nama_madrasah"
-                            required
-                            :error="form.errors.nama_madrasah"
-                        >
-                            <Input
-                                id="nama_madrasah"
-                                v-model="form.nama_madrasah"
-                                placeholder="MI Al-Hikmah"
-                            />
-                        </FormField>
-                        <FormField
-                            label="NPSN"
-                            for="npsn"
-                            :error="form.errors.npsn"
-                        >
-                            <Input
-                                id="npsn"
-                                v-model="form.npsn"
-                                placeholder="20512345"
-                            />
-                        </FormField>
-                        <FormField
-                            label="NSM (Nomor Statistik Madrasah)"
-                            for="nsm"
-                            :error="form.errors.nsm"
-                        >
-                            <Input
-                                id="nsm"
-                                v-model="form.nsm"
-                                placeholder="111132070001"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Kantor Kemenag Kab/Kota"
-                            for="kemenag_kab"
-                            :error="form.errors.kemenag_kab"
-                        >
-                            <Input
-                                id="kemenag_kab"
-                                v-model="form.kemenag_kab"
-                                placeholder="Kantor Kementerian Agama Kab. Ciamis"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Kota / Tempat Surat"
-                            for="tempat_surat"
-                            :error="form.errors.tempat_surat"
-                        >
-                            <Input
-                                id="tempat_surat"
-                                v-model="form.tempat_surat"
-                                placeholder="Ciamis"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Nama Operator EMIS"
-                            for="operator_nama"
-                            :error="form.errors.operator_nama"
-                        >
-                            <Input
-                                id="operator_nama"
-                                v-model="form.operator_nama"
-                                placeholder="Nama Operator"
-                            />
-                        </FormField>
-                        <div class="sm:col-span-2">
                             <FormField
-                                label="Alamat"
-                                for="alamat"
-                                :error="form.errors.alamat"
+                                label="NPSN"
+                                for="npsn"
+                                :error="form.errors.npsn"
                             >
-                                <textarea
-                                    id="alamat"
-                                    v-model="form.alamat"
-                                    rows="2"
-                                    placeholder="Jl. Raya Madrasah No. 12"
-                                    class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+                                <Input
+                                    id="npsn"
+                                    v-model="form.npsn"
+                                    placeholder="20512345"
+                                />
+                            </FormField>
+                            <FormField
+                                label="NSM (Nomor Statistik Madrasah)"
+                                for="nsm"
+                                :error="form.errors.nsm"
+                            >
+                                <Input
+                                    id="nsm"
+                                    v-model="form.nsm"
+                                    placeholder="111132070001"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Kantor Kemenag Kab/Kota"
+                                for="kemenag_kab"
+                                :error="form.errors.kemenag_kab"
+                            >
+                                <Input
+                                    id="kemenag_kab"
+                                    v-model="form.kemenag_kab"
+                                    placeholder="Kantor Kementerian Agama Kab. Ciamis"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Kota / Tempat Surat"
+                                for="tempat_surat"
+                                :error="form.errors.tempat_surat"
+                            >
+                                <Input
+                                    id="tempat_surat"
+                                    v-model="form.tempat_surat"
+                                    placeholder="Ciamis"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Nama Operator EMIS"
+                                for="operator_nama"
+                                :error="form.errors.operator_nama"
+                            >
+                                <Input
+                                    id="operator_nama"
+                                    v-model="form.operator_nama"
+                                    placeholder="Nama Operator"
+                                />
+                            </FormField>
+                            <div class="sm:col-span-2">
+                                <FormField
+                                    label="Alamat"
+                                    for="alamat"
+                                    :error="form.errors.alamat"
+                                >
+                                    <textarea
+                                        id="alamat"
+                                        v-model="form.alamat"
+                                        rows="2"
+                                        placeholder="Jl. Raya Madrasah No. 12"
+                                        class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+                                    />
+                                </FormField>
+                            </div>
+                            <FormField
+                                label="Desa / Kelurahan"
+                                for="desa"
+                                :error="form.errors.desa"
+                            >
+                                <Input
+                                    id="desa"
+                                    v-model="form.desa"
+                                    placeholder="Sukamaju"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Kecamatan"
+                                for="kecamatan"
+                                :error="form.errors.kecamatan"
+                            >
+                                <Input
+                                    id="kecamatan"
+                                    v-model="form.kecamatan"
+                                    placeholder="Cibadak"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Kabupaten / Kota"
+                                for="kabupaten"
+                                :error="form.errors.kabupaten"
+                            >
+                                <Input
+                                    id="kabupaten"
+                                    v-model="form.kabupaten"
+                                    placeholder="Sukabumi"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Provinsi"
+                                for="provinsi"
+                                :error="form.errors.provinsi"
+                            >
+                                <Input
+                                    id="provinsi"
+                                    v-model="form.provinsi"
+                                    placeholder="Jawa Barat"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Kode Pos"
+                                for="kode_pos"
+                                :error="form.errors.kode_pos"
+                            >
+                                <Input
+                                    id="kode_pos"
+                                    v-model="form.kode_pos"
+                                    placeholder="43351"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Telepon"
+                                for="telepon"
+                                :error="form.errors.telepon"
+                            >
+                                <Input
+                                    id="telepon"
+                                    v-model="form.telepon"
+                                    placeholder="0266-123456"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Email Madrasah"
+                                for="email_madrasah"
+                                :error="form.errors.email_madrasah"
+                            >
+                                <Input
+                                    id="email_madrasah"
+                                    v-model="form.email_madrasah"
+                                    type="email"
+                                    placeholder="info@mialhikmah.sch.id"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Website"
+                                for="website"
+                                :error="form.errors.website"
+                            >
+                                <Input
+                                    id="website"
+                                    v-model="form.website"
+                                    :placeholder="websitePlaceholder"
+                                />
+                            </FormField>
+                            <FormField
+                                label="No. HP / WA Operator EMIS"
+                                for="operator_hp"
+                                :error="form.errors.operator_hp"
+                            >
+                                <Input
+                                    id="operator_hp"
+                                    v-model="form.operator_hp"
+                                    placeholder="0812xxxxxxxx"
                                 />
                             </FormField>
                         </div>
-                        <FormField
-                            label="Desa / Kelurahan"
-                            for="desa"
-                            :error="form.errors.desa"
-                        >
-                            <Input
-                                id="desa"
-                                v-model="form.desa"
-                                placeholder="Sukamaju"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Kecamatan"
-                            for="kecamatan"
-                            :error="form.errors.kecamatan"
-                        >
-                            <Input
-                                id="kecamatan"
-                                v-model="form.kecamatan"
-                                placeholder="Cibadak"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Kabupaten / Kota"
-                            for="kabupaten"
-                            :error="form.errors.kabupaten"
-                        >
-                            <Input
-                                id="kabupaten"
-                                v-model="form.kabupaten"
-                                placeholder="Sukabumi"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Provinsi"
-                            for="provinsi"
-                            :error="form.errors.provinsi"
-                        >
-                            <Input
-                                id="provinsi"
-                                v-model="form.provinsi"
-                                placeholder="Jawa Barat"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Kode Pos"
-                            for="kode_pos"
-                            :error="form.errors.kode_pos"
-                        >
-                            <Input
-                                id="kode_pos"
-                                v-model="form.kode_pos"
-                                placeholder="43351"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Telepon"
-                            for="telepon"
-                            :error="form.errors.telepon"
-                        >
-                            <Input
-                                id="telepon"
-                                v-model="form.telepon"
-                                placeholder="0266-123456"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Email Madrasah"
-                            for="email_madrasah"
-                            :error="form.errors.email_madrasah"
-                        >
-                            <Input
-                                id="email_madrasah"
-                                v-model="form.email_madrasah"
-                                type="email"
-                                placeholder="info@mialhikmah.sch.id"
-                            />
-                        </FormField>
-                        <FormField
-                            label="Website"
-                            for="website"
-                            :error="form.errors.website"
-                        >
-                            <Input
-                                id="website"
-                                v-model="form.website"
-                                :placeholder="websitePlaceholder"
-                            />
-                        </FormField>
-                        <FormField
-                            label="No. HP / WA Operator EMIS"
-                            for="operator_hp"
-                            :error="form.errors.operator_hp"
-                        >
-                            <Input
-                                id="operator_hp"
-                                v-model="form.operator_hp"
-                                placeholder="0812xxxxxxxx"
-                            />
-                        </FormField>
-                    </div>
-                </section>
+                    </section>
 
-                <!-- Kop Surat & Logo Resmi (EMIS 4.0) -->
+                    <!-- Kop Surat & Logo Resmi (EMIS 4.0) -->
+                    <section
+                        class="rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(7,63,36,0.04)]"
+                    >
+                        <div
+                            class="flex items-center gap-3 border-b border-border/70 px-5 py-4"
+                        >
+                            <div
+                                class="grid size-9 place-items-center rounded-lg bg-[#107c41]/8 text-[#107c41] ring-1 ring-[#107c41]/12"
+                            >
+                                <ImagePlus class="size-4" />
+                            </div>
+                            <div>
+                                <h2
+                                    class="font-serif text-base font-bold text-foreground"
+                                >
+                                    Logo Kop Surat Resmi (EMIS 4.0)
+                                </h2>
+                                <p class="text-[11px] text-muted-foreground">
+                                    Digunakan otomatis pada cetak KTS, Buku
+                                    Induk, Surat Pindah, dan Transkrip Nilai
+                                    RDM.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="grid gap-4 p-5 sm:grid-cols-2">
+                            <div
+                                class="rounded-xl border border-border/80 bg-muted/20 p-3.5"
+                            >
+                                <p
+                                    class="text-xs font-semibold text-foreground"
+                                >
+                                    Logo Kiri (Kemenag / Instansi)
+                                </p>
+                                <div class="mt-3 flex items-center gap-3">
+                                    <div
+                                        class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-white"
+                                    >
+                                        <img
+                                            v-if="form.logo_kiri"
+                                            :src="form.logo_kiri"
+                                            alt="Logo Kiri"
+                                            class="size-full object-contain p-1"
+                                        />
+                                        <span
+                                            v-else
+                                            class="text-[10px] text-muted-foreground"
+                                            >Kosong</span
+                                        >
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            @click="logoKiriInputRef?.click()"
+                                        >
+                                            Unggah
+                                        </Button>
+                                        <Button
+                                            v-if="form.logo_kiri"
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            class="text-rose-600"
+                                            @click="form.logo_kiri = ''"
+                                        >
+                                            <Trash2 class="size-3.5" />
+                                        </Button>
+                                    </div>
+                                </div>
+                                <input
+                                    ref="logoKiriInputRef"
+                                    type="file"
+                                    accept="image/*"
+                                    class="hidden"
+                                    @change="
+                                        handleLogoUpload($event, 'logo_kiri')
+                                    "
+                                />
+                            </div>
+
+                            <div
+                                class="rounded-xl border border-border/80 bg-muted/20 p-3.5"
+                            >
+                                <p
+                                    class="text-xs font-semibold text-foreground"
+                                >
+                                    Logo Kanan (Madrasah)
+                                </p>
+                                <div class="mt-3 flex items-center gap-3">
+                                    <div
+                                        class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-white"
+                                    >
+                                        <img
+                                            v-if="form.logo_kanan"
+                                            :src="form.logo_kanan"
+                                            alt="Logo Kanan"
+                                            class="size-full object-contain p-1"
+                                        />
+                                        <span
+                                            v-else
+                                            class="text-[10px] text-muted-foreground"
+                                            >Kosong</span
+                                        >
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            @click="logoKananInputRef?.click()"
+                                        >
+                                            Unggah
+                                        </Button>
+                                        <Button
+                                            v-if="form.logo_kanan"
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            class="text-rose-600"
+                                            @click="form.logo_kanan = ''"
+                                        >
+                                            <Trash2 class="size-3.5" />
+                                        </Button>
+                                    </div>
+                                </div>
+                                <input
+                                    ref="logoKananInputRef"
+                                    type="file"
+                                    accept="image/*"
+                                    class="hidden"
+                                    @change="
+                                        handleLogoUpload($event, 'logo_kanan')
+                                    "
+                                />
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Kepala madrasah -->
+                    <section
+                        class="rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(7,63,36,0.04)]"
+                    >
+                        <div
+                            class="flex items-center gap-3 border-b border-border/70 px-5 py-4"
+                        >
+                            <div
+                                class="grid size-9 place-items-center rounded-lg bg-[#107c41]/8 text-[#107c41] ring-1 ring-[#107c41]/12"
+                            >
+                                <BadgeCheck class="size-4" />
+                            </div>
+                            <div>
+                                <h2
+                                    class="font-serif text-base font-bold text-foreground"
+                                >
+                                    Kepala Madrasah
+                                </h2>
+                                <p class="text-[11px] text-muted-foreground">
+                                    Nama penanda tangan pada dokumen resmi.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="grid gap-4 p-5 sm:grid-cols-2">
+                            <FormField
+                                label="Nama Kepala Madrasah"
+                                for="nama_kepala_madrasah"
+                                :error="form.errors.nama_kepala_madrasah"
+                            >
+                                <Input
+                                    id="nama_kepala_madrasah"
+                                    v-model="form.nama_kepala_madrasah"
+                                    placeholder="H. Abdul Rahman, S.Pd.I., M.M."
+                                />
+                            </FormField>
+                            <FormField
+                                label="NIP Kepala Madrasah"
+                                for="nip_kepala_madrasah"
+                                :error="form.errors.nip_kepala_madrasah"
+                            >
+                                <Input
+                                    id="nip_kepala_madrasah"
+                                    v-model="form.nip_kepala_madrasah"
+                                    placeholder="197003151998031002"
+                                />
+                            </FormField>
+                        </div>
+                    </section>
+
+                    <div class="flex items-center justify-end gap-2 pb-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            :disabled="resetting"
+                            @click="confirmResetOpen = true"
+                        >
+                            <RotateCcw class="size-4" />
+                            Reset Default MIN 1
+                        </Button>
+                        <Button type="submit" :disabled="form.processing">
+                            <LoaderCircle
+                                v-if="form.processing"
+                                class="animate-spin"
+                            />
+                            <Save v-else />
+                            Simpan Profil &amp; Identitas
+                        </Button>
+                    </div>
+                </form>
+
+                <!-- Keamanan Akun Login Admin / Operator -->
                 <section
                     class="rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(7,63,36,0.04)]"
                 >
                     <div
-                        class="flex items-center gap-3 border-b border-border/70 px-5 py-4"
+                        class="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 px-5 py-4"
                     >
-                        <div
-                            class="grid size-9 place-items-center rounded-lg bg-[#107c41]/8 text-[#107c41] ring-1 ring-[#107c41]/12"
-                        >
-                            <ImagePlus class="size-4" />
-                        </div>
-                        <div>
-                            <h2
-                                class="font-serif text-base font-bold text-foreground"
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="grid size-9 place-items-center rounded-lg bg-[#107c41]/8 text-[#107c41] ring-1 ring-[#107c41]/12"
                             >
-                                Logo Kop Surat Resmi (EMIS 4.0)
-                            </h2>
-                            <p class="text-[11px] text-muted-foreground">
-                                Digunakan otomatis pada cetak KTS, Buku Induk,
-                                Surat Pindah, dan Transkrip Nilai RDM.
-                            </p>
+                                <ShieldCheck class="size-4" />
+                            </div>
+                            <div>
+                                <h2
+                                    class="font-serif text-base font-bold text-foreground"
+                                >
+                                    Keamanan Akun Login Admin / Operator
+                                </h2>
+                                <p class="text-[11px] text-muted-foreground">
+                                    Kelola nama/email login dan kata sandi akses
+                                    sistem langsung dari halaman profil.
+                                </p>
+                            </div>
                         </div>
+                        <Button variant="outline" size="sm" as-child>
+                            <Link href="/settings/security">
+                                <KeyRound class="size-3.5" />
+                                2FA &amp; Passkey
+                            </Link>
+                        </Button>
                     </div>
-                    <div class="grid gap-4 p-5 sm:grid-cols-2">
-                        <div
-                            class="rounded-xl border border-border/80 bg-muted/20 p-3.5"
-                        >
-                            <p class="text-xs font-semibold text-foreground">
-                                Logo Kiri (Kemenag / Instansi)
-                            </p>
-                            <div class="mt-3 flex items-center gap-3">
-                                <div
-                                    class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-white"
-                                >
-                                    <img
-                                        v-if="form.logo_kiri"
-                                        :src="form.logo_kiri"
-                                        alt="Logo Kiri"
-                                        class="size-full object-contain p-1"
-                                    />
-                                    <span
-                                        v-else
-                                        class="text-[10px] text-muted-foreground"
-                                        >Kosong</span
-                                    >
-                                </div>
-                                <div class="flex flex-wrap gap-2">
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        @click="logoKiriInputRef?.click()"
-                                    >
-                                        Unggah
-                                    </Button>
-                                    <Button
-                                        v-if="form.logo_kiri"
-                                        type="button"
-                                        size="sm"
-                                        variant="ghost"
-                                        class="text-rose-600"
-                                        @click="form.logo_kiri = ''"
-                                    >
-                                        <Trash2 class="size-3.5" />
-                                    </Button>
-                                </div>
-                            </div>
-                            <input
-                                ref="logoKiriInputRef"
-                                type="file"
-                                accept="image/*"
-                                class="hidden"
-                                @change="handleLogoUpload($event, 'logo_kiri')"
-                            />
-                        </div>
 
-                        <div
-                            class="rounded-xl border border-border/80 bg-muted/20 p-3.5"
+                    <div class="space-y-5 p-5">
+                        <form
+                            class="grid items-end gap-4 border-b border-border/60 pb-5 sm:grid-cols-3"
+                            @submit.prevent="submitAccount"
                         >
-                            <p class="text-xs font-semibold text-foreground">
-                                Logo Kanan (Madrasah)
-                            </p>
-                            <div class="mt-3 flex items-center gap-3">
-                                <div
-                                    class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-white"
+                            <FormField
+                                label="Nama Akun / Operator"
+                                for="account_name"
+                                required
+                                :error="accountForm.errors.name"
+                            >
+                                <Input
+                                    id="account_name"
+                                    v-model="accountForm.name"
+                                    placeholder="Nama Akun"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Email Login"
+                                for="account_email"
+                                required
+                                :error="accountForm.errors.email"
+                            >
+                                <Input
+                                    id="account_email"
+                                    v-model="accountForm.email"
+                                    type="email"
+                                    placeholder="email@madrasah.sch.id"
+                                />
+                            </FormField>
+                            <div>
+                                <Button
+                                    type="submit"
+                                    variant="secondary"
+                                    class="w-full"
+                                    :disabled="accountForm.processing"
                                 >
-                                    <img
-                                        v-if="form.logo_kanan"
-                                        :src="form.logo_kanan"
-                                        alt="Logo Kanan"
-                                        class="size-full object-contain p-1"
+                                    <LoaderCircle
+                                        v-if="accountForm.processing"
+                                        class="size-4 animate-spin"
                                     />
-                                    <span
-                                        v-else
-                                        class="text-[10px] text-muted-foreground"
-                                        >Kosong</span
-                                    >
-                                </div>
-                                <div class="flex flex-wrap gap-2">
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        @click="logoKananInputRef?.click()"
-                                    >
-                                        Unggah
-                                    </Button>
-                                    <Button
-                                        v-if="form.logo_kanan"
-                                        type="button"
-                                        size="sm"
-                                        variant="ghost"
-                                        class="text-rose-600"
-                                        @click="form.logo_kanan = ''"
-                                    >
-                                        <Trash2 class="size-3.5" />
-                                    </Button>
-                                </div>
+                                    <Save v-else class="size-4" />
+                                    Simpan Akun Login
+                                </Button>
                             </div>
-                            <input
-                                ref="logoKananInputRef"
-                                type="file"
-                                accept="image/*"
-                                class="hidden"
-                                @change="handleLogoUpload($event, 'logo_kanan')"
-                            />
-                        </div>
+                        </form>
+
+                        <form
+                            class="grid items-end gap-4 sm:grid-cols-4"
+                            @submit.prevent="submitPassword"
+                        >
+                            <FormField
+                                label="Password Saat Ini"
+                                for="current_password"
+                                required
+                                :error="passwordForm.errors.current_password"
+                            >
+                                <Input
+                                    id="current_password"
+                                    v-model="passwordForm.current_password"
+                                    type="password"
+                                    autocomplete="current-password"
+                                    placeholder="••••••••"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Password Baru"
+                                for="new_password"
+                                required
+                                :error="passwordForm.errors.password"
+                            >
+                                <Input
+                                    id="new_password"
+                                    v-model="passwordForm.password"
+                                    type="password"
+                                    autocomplete="new-password"
+                                    placeholder="Minimal 8 karakter"
+                                />
+                            </FormField>
+                            <FormField
+                                label="Konfirmasi Password"
+                                for="password_confirmation"
+                                required
+                                :error="
+                                    passwordForm.errors.password_confirmation
+                                "
+                            >
+                                <Input
+                                    id="password_confirmation"
+                                    v-model="passwordForm.password_confirmation"
+                                    type="password"
+                                    autocomplete="new-password"
+                                    placeholder="Ulangi password"
+                                />
+                            </FormField>
+                            <div>
+                                <Button
+                                    type="submit"
+                                    class="w-full"
+                                    :disabled="passwordForm.processing"
+                                >
+                                    <LoaderCircle
+                                        v-if="passwordForm.processing"
+                                        class="size-4 animate-spin"
+                                    />
+                                    <KeyRound v-else class="size-4" />
+                                    Ubah Password
+                                </Button>
+                            </div>
+                        </form>
                     </div>
                 </section>
-
-                <!-- Kepala madrasah -->
-                <section
-                    class="rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(7,63,36,0.04)]"
-                >
-                    <div
-                        class="flex items-center gap-3 border-b border-border/70 px-5 py-4"
-                    >
-                        <div
-                            class="grid size-9 place-items-center rounded-lg bg-[#107c41]/8 text-[#107c41] ring-1 ring-[#107c41]/12"
-                        >
-                            <BadgeCheck class="size-4" />
-                        </div>
-                        <div>
-                            <h2
-                                class="font-serif text-base font-bold text-foreground"
-                            >
-                                Kepala Madrasah
-                            </h2>
-                            <p class="text-[11px] text-muted-foreground">
-                                Nama penanda tangan pada dokumen resmi.
-                            </p>
-                        </div>
-                    </div>
-                    <div class="grid gap-4 p-5 sm:grid-cols-2">
-                        <FormField
-                            label="Nama Kepala Madrasah"
-                            for="nama_kepala_madrasah"
-                            :error="form.errors.nama_kepala_madrasah"
-                        >
-                            <Input
-                                id="nama_kepala_madrasah"
-                                v-model="form.nama_kepala_madrasah"
-                                placeholder="H. Abdul Rahman, S.Pd.I., M.M."
-                            />
-                        </FormField>
-                        <FormField
-                            label="NIP Kepala Madrasah"
-                            for="nip_kepala_madrasah"
-                            :error="form.errors.nip_kepala_madrasah"
-                        >
-                            <Input
-                                id="nip_kepala_madrasah"
-                                v-model="form.nip_kepala_madrasah"
-                                placeholder="197003151998031002"
-                            />
-                        </FormField>
-                    </div>
-                </section>
-
-                <div class="flex items-center justify-end gap-2 pb-2">
-                    <Button variant="outline" as-child type="button">
-                        <Link href="/beranda">Batal</Link>
-                    </Button>
-                    <Button type="submit" :disabled="form.processing">
-                        <LoaderCircle
-                            v-if="form.processing"
-                            class="animate-spin"
-                        />
-                        <Save v-else />
-                        Simpan Identitas
-                    </Button>
-                </div>
             </div>
 
             <!-- Live preview -->
@@ -880,7 +1138,8 @@ const websitePlaceholder = 'https://mialhikmah.sch.id';
                             {{ form.nama_kepala_madrasah || 'Kepala Madrasah' }}
                         </span>
                         <span class="text-[9px] font-semibold text-[#e8c96b]">
-                            {{ form.npsn || 'NPSN —' }}
+                            NSM {{ form.nsm || '—' }} · NPSN
+                            {{ form.npsn || '—' }}
                         </span>
                     </div>
                 </div>
@@ -971,6 +1230,16 @@ const websitePlaceholder = 'https://mialhikmah.sch.id';
                     </p>
                 </div>
             </aside>
-        </form>
+        </div>
     </div>
+
+    <ConfirmDialog
+        v-model:open="confirmResetOpen"
+        title="Reset Profil Madrasah ke Default MIN 1 Ciamis?"
+        description="Pengaturan identitas lembaga madrasah, NSM/NPSN, kepala madrasah, operator, dan logo kop surat akan dikembalikan ke data bawaan MIN 1 Ciamis."
+        confirm-label="Ya, Reset Default"
+        variant="destructive"
+        :loading="resetting"
+        @confirm="executeResetDefault"
+    />
 </template>
